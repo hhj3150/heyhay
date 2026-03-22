@@ -52,7 +52,7 @@ router.get('/daily', async (req, res, next) => {
       const result = await query(`
         SELECT date::text AS date, total_l, COALESCE(dairy_assoc_l, 0) AS dairy_assoc_l, COALESCE(d2o_l, 0) AS d2o_l
         FROM daily_milk_totals
-        WHERE date >= CURRENT_DATE - $1
+        WHERE date >= (NOW() AT TIME ZONE 'Asia/Seoul')::date - $1
         ORDER BY date DESC
       `, [days])
 
@@ -237,13 +237,17 @@ router.post('/daily-total', async (req, res, next) => {
     await query(`ALTER TABLE daily_milk_totals ADD COLUMN IF NOT EXISTS dairy_assoc_l NUMERIC(8,2) DEFAULT 0`).catch(() => {})
     await query(`ALTER TABLE daily_milk_totals ADD COLUMN IF NOT EXISTS d2o_l NUMERIC(8,2) DEFAULT 0`).catch(() => {})
 
+    // 진흥회 = 총 착유량 - D2O (자동 계산)
+    const d2oAmount = d2o_l || 0
+    const dairyAmount = dairy_assoc_l || Math.max(0, amount_l - d2oAmount)
+
     // UPSERT
     const result = await query(`
       INSERT INTO daily_milk_totals (date, total_l, dairy_assoc_l, d2o_l, recorded_by)
       VALUES ($1, $2, $3, $4, $5)
       ON CONFLICT (date) DO UPDATE SET total_l = $2, dairy_assoc_l = $3, d2o_l = $4, updated_at = NOW()
       RETURNING *
-    `, [targetDate, amount_l, dairy_assoc_l || 0, d2o_l || 0, req.user?.id])
+    `, [targetDate, amount_l, dairyAmount, d2oAmount, req.user?.id])
 
     res.status(201).json(apiResponse(result.rows[0]))
   } catch (err) {
@@ -262,8 +266,8 @@ router.get('/monthly-dairy', async (req, res, next) => {
         COALESCE(SUM(COALESCE(d2o_l, 0)), 0) AS total_d2o_l,
         COALESCE(SUM(total_l), 0) AS total_milk_l
       FROM daily_milk_totals
-      WHERE date >= DATE_TRUNC('month', CURRENT_DATE)
-        AND date <= CURRENT_DATE
+      WHERE date >= DATE_TRUNC('month', (NOW() AT TIME ZONE 'Asia/Seoul')::date)
+        AND date <= (NOW() AT TIME ZONE 'Asia/Seoul')::date
     `)
     res.json(apiResponse(result.rows[0]))
   } catch (err) {

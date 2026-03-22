@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>송영신목장 ERP V56</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans KR', sans-serif; background-color: #f0f4f8; }
+        .card { background: white; border-radius: 1rem; padding: 1.25rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; }
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; cursor: pointer; height: 20px; margin: 8px 0; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 8px; border-radius: 4px; background: #e2e8f0; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 24px; width: 24px; border-radius: 50%; background: #fff; border: 4px solid currentColor; margin-top: -9px; }
+        .tmr-table, .acc-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.8rem; }
+        .tmr-table th, .acc-table th { background: #f8fafc; padding: 8px; border-bottom: 2px solid #e2e8f0; font-weight: 700; }
+        .tmr-table td, .acc-table td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; text-align: center; }
+        .acc-table td:first-child { text-align: left; }
+        .tmr-table input { width: 100%; text-align: center; border: 1px solid transparent; background: transparent; font-weight: 700; border-radius: 4px; }
+        .tmr-total td, .total-row td { background: #f8fafc; font-weight: 800; border-top: 2px solid #cbd5e1; }
+        .sub-row td { color: #64748b; padding-left: 1.5rem !important; font-size: 0.75rem; }
+        .status-bar { position: sticky; top: 0; z-index: 50; background: linear-gradient(90deg, #0f172a, #1e293b); color: white; padding: 0.75rem 1.5rem; }
+        .status-value { font-family: 'Courier New', monospace; font-weight: 700; font-size: 1.25rem; }
+        .tab-btn { flex: 1; padding: 12px; font-size: 0.95rem; font-weight: 600; color: #64748b; border-bottom: 4px solid transparent; }
+        .tab-active { background: white; border-bottom-color: currentColor; color: #0f172a; }
+        .indicator { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; border: 1px solid; }
+        .ind-good { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
+        .ind-warn { background: #fef9c3; color: #854d0e; border-color: #fde047; }
+        .ind-bad { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
+        .ai-col { background-color: #f0fdf4; color: #15803d; font-weight: 700; }
+        .val { font-family: 'Courier New', monospace; }
+        .product-card { background: linear-gradient(135deg, #f8fafc, #f1f5f9); border-radius: 0.75rem; padding: 1rem; border: 1px solid #e2e8f0; }
+    </style>
+</head>
+<body class="text-slate-800 h-screen flex flex-col overflow-hidden">
+    <div class="status-bar flex justify-between items-center shrink-0">
+        <div class="flex items-center gap-4">
+            <div class="bg-amber-500 text-white p-2 rounded-lg font-black text-2xl">S</div>
+            <div><h1 class="font-bold text-xl text-white">Song's ERP <span class="text-amber-400">V56</span></h1><p class="text-[10px] text-slate-400">Factory & Cafe Redesign</p></div>
+        </div>
+        <div class="flex gap-8 items-center">
+            <div class="flex flex-col items-end"><span class="text-[10px] text-amber-500 font-bold">RANCH</span><span id="st-ranch" class="status-value text-amber-400">0</span></div>
+            <div class="w-px h-8 bg-slate-600"></div>
+            <div class="flex flex-col items-end"><span class="text-[10px] text-blue-500 font-bold">FACTORY</span><span id="st-factory" class="status-value text-blue-400">0</span></div>
+            <div class="w-px h-8 bg-slate-600"></div>
+            <div class="flex flex-col items-end"><span class="text-[10px] text-emerald-500 font-bold">CAFE</span><span id="st-cafe" class="status-value text-emerald-400">0</span></div>
+            <div class="w-px h-8 bg-slate-600"></div>
+            <div class="flex flex-col items-end bg-slate-700/50 px-4 py-1 rounded-lg"><span class="text-[10px] text-white font-bold">TOTAL</span><span id="st-total" class="status-value text-white text-3xl">0</span></div>
+        </div>
+    </div>
+    <nav class="bg-white border-b flex shrink-0 z-40">
+        <button onclick="app.navigate('ranch')" id="nav-ranch" class="tab-btn tab-active">🐄 1. 목장</button>
+        <button onclick="app.navigate('factory')" id="nav-factory" class="tab-btn">🏭 2. 공장</button>
+        <button onclick="app.navigate('sales')" id="nav-sales" class="tab-btn">☕ 3. 카페</button>
+        <button onclick="app.navigate('dashboard')" id="nav-dashboard" class="tab-btn">📊 4. 대시보드</button>
+    </nav>
+    <main id="main-content" class="flex-grow p-6 overflow-y-auto bg-slate-100/50"></main>
+    <div id="aiModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden">
+            <div class="bg-slate-900 p-5 flex justify-between items-center text-white"><h3 class="font-bold text-xl">🤖 AI 진단</h3><button onclick="document.getElementById('aiModal').classList.add('hidden')" class="text-2xl">&times;</button></div>
+            <div class="p-8 bg-slate-50 overflow-y-auto flex-grow"><div id="aiModalContent" class="prose max-w-none text-sm"></div></div>
+        </div>
+    </div>
+<script>
+const nutriDB={alfalfa:{name:'알팔파',dm:88,nel:1.35,cp:18,n6:5,n3:15,type:'roughage'},timothy:{name:'티모시',dm:88,nel:1.25,cp:12,n6:4,n3:12,type:'roughage'},oats:{name:'연맥',dm:88,nel:1.15,cp:9,n6:8,n3:6,type:'roughage'},corn:{name:'옥수수',dm:86,nel:2.05,cp:9,n6:50,n3:1,type:'concentrate'},soybean:{name:'대두박',dm:88,nel:1.95,cp:48,n6:40,n3:6,type:'concentrate'},mixFeed:{name:'배합사료',dm:88,nel:1.85,cp:16,n6:30,n3:2,type:'concentrate'},additive:{name:'오메가첨가',dm:95,nel:0,cp:0,n6:1,n3:100,type:'additive'}};
+
+const store={
+    view:'ranch',
+    ranch:{cows:17,heifers:5,yield:25,bodyWeight:450,fat:5,protein:3.8,
+        tmrMilking:{alfalfa:{asFed:5,price:850,dbKey:'alfalfa'},timothy:{asFed:4,price:900,dbKey:'timothy'},oats:{asFed:3,price:600,dbKey:'oats'},corn:{asFed:1,price:550,dbKey:'corn'},soybean:{asFed:0.5,price:800,dbKey:'soybean'},mixFeed:{asFed:1,price:700,dbKey:'mixFeed'},additive:{asFed:0.1,price:5000,dbKey:'additive'}},
+        tmrHeifer:{alfalfa:{asFed:2,price:850,dbKey:'alfalfa'},timothy:{asFed:3,price:900,dbKey:'timothy'},oats:{asFed:1,price:600,dbKey:'oats'},mixFeed:{asFed:2,price:650,dbKey:'mixFeed'},corn:{asFed:0,price:550,dbKey:'corn'}},
+        feedMilkingDaily:0,feedHeiferDaily:0,nutri:{},aiRec:{},fixedCost:12000000,processingRatio:50,napyuPrice:1100,transferPrice:3500},
+    factory:{
+        productAlloc:{mix:15,latteMilk:10,milk750:40,yogurt500:35},
+        channelCafe:{milk750:30,yogurt500:30},
+        cost:{labor:200,material:150,packaging:400,utility:100,mixAdditive:3000},
+        marginRate:{mix:30,latteMilk:25,milk750:25,yogurt500:25},
+        lossRate:5,fixedCost:7000000},
+    cafe:{retail:{iceCream:6500,latte:7500,yogurt:10000,milk:10000},fees:{menu:25,goods:15},latteAddCost:1000,costLabor:3500000,costOps:1500000},
+    specs:{iceCream:0.12,latte:0.18,yogurt:0.5,milk:0.75},
+    results:null
+};
+
+let chartInstances={};
+
+const logic={
+    calc:function(){
+        const r=store.ranch;
+        const neMaint=0.08*Math.pow(r.bodyWeight,0.75);
+        const neProd=r.yield*(0.0929*r.fat+0.0547*r.protein+0.192);
+        const totalNELReq=neMaint+neProd;
+        const cpMaint=5*Math.pow(r.bodyWeight,0.5);
+        const milkProteinG=r.yield*r.protein*10;
+        const reqProtein=(milkProteinG/0.65)+cpMaint;
+        const fcm4=(0.4*r.yield)+(15*(r.fat/100)*r.yield);
+        const limitDMI=(0.018*r.bodyWeight)+(0.305*fcm4);
+
+        let mCost=0,supEnergy=0,supProtein=0,actualDMI=0,mAsFed=0,sumN6=0,sumN3=0,forageDM=0;
+        for(const k in r.tmrMilking){const i=r.tmrMilking[k];const meta=nutriDB[i.dbKey];if(!meta)continue;const dmKg=i.asFed*(meta.dm/100);mCost+=i.asFed*i.price;mAsFed+=i.asFed;actualDMI+=dmKg;supEnergy+=dmKg*meta.nel;supProtein+=dmKg*(meta.cp*10);sumN6+=dmKg*meta.n6;sumN3+=dmKg*meta.n3;if(meta.type==='roughage')forageDM+=dmKg;}
+        store.ranch.feedMilkingDaily=Math.round(mCost);
+        let hCost=0;for(const k in r.tmrHeifer){hCost+=r.tmrHeifer[k].asFed*r.tmrHeifer[k].price;}
+        store.ranch.feedHeiferDaily=Math.round(hCost);
+
+        const omegaRatio=sumN3>0?sumN6/sumN3:0;
+        const foragePct=actualDMI>0?(forageDM/actualDMI)*100:0;
+        const grainPct=100-foragePct;
+        const energyPerKg=(0.0929*r.fat+0.0547*r.protein+0.192);
+        let predYield=0;if(supEnergy>neMaint)predYield=(supEnergy-neMaint)/energyPerKg;
+
+        const aiRec={};const targetDMI=Math.min(limitDMI,16);const maxGrainDM=targetDMI*0.24;const targetForageDM=targetDMI-maxGrainDM;
+        aiRec.alfalfa=(targetForageDM*0.6)/(nutriDB.alfalfa.dm/100);aiRec.timothy=(targetForageDM*0.4)/(nutriDB.timothy.dm/100);
+        aiRec.corn=(maxGrainDM*0.3)/(nutriDB.corn.dm/100);aiRec.soybean=(maxGrainDM*0.2)/(nutriDB.soybean.dm/100);aiRec.mixFeed=(maxGrainDM*0.5)/(nutriDB.mixFeed.dm/100);aiRec.oats=0;aiRec.additive=0.5;
+        store.ranch.aiRec=aiRec;
+        store.ranch.nutri={reqEnergy:totalNELReq,supEnergy,reqProtein,supProtein,limitDMI,actualDMI,predYield,omegaRatio,grainPct,foragePct,mAsFed,mCost};
+        return this.calculateBusiness(mCost,hCost);
+    },
+
+    calculateBusiness:function(mCostDaily,hCostDaily){
+        const r=store.ranch,f=store.factory,c=store.cafe,n=r.nutri;
+
+        // RANCH
+        const dailyProd=n.predYield*r.cows;
+        const monthlyProd=dailyProd*30;
+        const volProcessing=monthlyProd*(r.processingRatio/100);
+        const volNapyu=monthlyProd-volProcessing;
+        const revRanch=(volNapyu*r.napyuPrice)+(volProcessing*r.transferPrice);
+        const costFeed=(r.cows*mCostDaily*30)+(r.heifers*hCostDaily*30);
+        const ranchExp=costFeed+r.fixedCost;
+        const profitRanch=revRanch-ranchExp;
+        const costPerLiter=monthlyProd>0?ranchExp/monthlyProd:0;
+        const feedCostPerLiter=monthlyProd>0?costFeed/monthlyProd:0;
+
+        // FACTORY
+        const inputVol=volProcessing;
+        const lossMult=1+(f.lossRate||5)/100;
+        const pa=f.productAlloc,cc=f.channelCafe,fc=f.cost,mr=f.marginRate;
+
+        const prodMix=inputVol*(pa.mix/100);
+        const prodLatteMilk=inputVol*(pa.latteMilk/100);
+        const prodMilk750=inputVol*(pa.milk750/100);
+        const prodYogurt500=inputVol*(pa.yogurt500/100);
+
+        const volMixCafe=prodMix;
+        const volLatteMilkCafe=prodLatteMilk;
+        const volMilk750Cafe=prodMilk750*(cc.milk750/100);
+        const volMilk750D2C=prodMilk750-volMilk750Cafe;
+        const volYogurt500Cafe=prodYogurt500*(cc.yogurt500/100);
+        const volYogurt500D2C=prodYogurt500-volYogurt500Cafe;
+
+        const baseCostPerL=r.transferPrice+fc.labor+fc.material+fc.utility;
+        const costMixPerL=(baseCostPerL+fc.mixAdditive+fc.packaging)*lossMult;
+        const costLatteMilkPerL=(baseCostPerL+fc.packaging*0.5)*lossMult;
+        const costMilk750PerUnit=(baseCostPerL*0.75+fc.packaging)*lossMult;
+        const costYogurt500PerUnit=(baseCostPerL*0.5+fc.packaging)*lossMult;
+
+        const supplyMix=Math.ceil(costMixPerL*(1+mr.mix/100)/100)*100;
+        const supplyLatteMilk20L=Math.ceil(costLatteMilkPerL*20*(1+mr.latteMilk/100)/100)*100;
+        const supplyMilk750=Math.ceil(costMilk750PerUnit*(1+mr.milk750/100)/100)*100;
+        const supplyYogurt500=Math.ceil(costYogurt500PerUnit*(1+mr.yogurt500/100)/100)*100;
+
+        const revMixCafe=(volMixCafe/1)*supplyMix;
+        const revLatteMilkCafe=(volLatteMilkCafe/20)*supplyLatteMilk20L;
+        const revMilk750Cafe=(volMilk750Cafe/0.75)*supplyMilk750;
+        const revYogurt500Cafe=(volYogurt500Cafe/0.5)*supplyYogurt500;
+        const factRevFromCafe=revMixCafe+revLatteMilkCafe+revMilk750Cafe+revYogurt500Cafe;
+
+        const d2cPriceMilk=supplyMilk750*1.3;
+        const d2cPriceYogurt=supplyYogurt500*1.3;
+        const revMilk750D2C=(volMilk750D2C/0.75)*d2cPriceMilk;
+        const revYogurt500D2C=(volYogurt500D2C/0.5)*d2cPriceYogurt;
+        const factRevD2C=revMilk750D2C+revYogurt500D2C;
+        const factoryRev=factRevFromCafe+factRevD2C;
+
+        const factRawCost=inputVol*r.transferPrice;
+        const factLaborCost=inputVol*fc.labor;
+        const factMaterialCost=inputVol*fc.material+prodMix*fc.mixAdditive;
+        const factUtilityCost=inputVol*fc.utility;
+        const factPackagingCost=(prodMix+prodLatteMilk*0.5+(prodMilk750/0.75)+(prodYogurt500/0.5))*fc.packaging;
+        const factVarCost=factLaborCost+factMaterialCost+factUtilityCost+factPackagingCost;
+        const factTotalCost=factRawCost+factVarCost+f.fixedCost;
+        const factoryProfit=factoryRev-factTotalCost;
+
+        // CAFE
+        const unitsIceCream=volMixCafe/store.specs.iceCream;
+        const unitsLatte=volLatteMilkCafe/store.specs.latte;
+        const unitsMilk=volMilk750Cafe/store.specs.milk;
+        const unitsYogurt=volYogurt500Cafe/store.specs.yogurt;
+
+        const revIceCream=unitsIceCream*c.retail.iceCream;
+        const revLatte=unitsLatte*c.retail.latte;
+        const revMilk=unitsMilk*c.retail.milk;
+        const revYogurt=unitsYogurt*c.retail.yogurt;
+        const cafeRev=revIceCream+revLatte+revMilk+revYogurt;
+
+        const cogsLatteAdd=unitsLatte*c.latteAddCost;
+        const cafeCOGS=revMixCafe+revLatteMilkCafe+revMilk750Cafe+revYogurt500Cafe+cogsLatteAdd;
+
+        const feeMenu=(revIceCream+revLatte)*(c.fees.menu/100);
+        const feeGoods=(revMilk+revYogurt)*(c.fees.goods/100);
+        const cafeFees=feeMenu+feeGoods;
+        const cafeGross=cafeRev-cafeCOGS;
+        const cafeFixed=c.costLabor+c.costOps;
+        const cafeProfit=cafeRev-cafeCOGS-cafeFees-cafeFixed;
+
+        const unitProfits={
+            iceCream:c.retail.iceCream-(store.specs.iceCream*supplyMix)-(c.retail.iceCream*c.fees.menu/100),
+            latte:c.retail.latte-((store.specs.latte/20)*supplyLatteMilk20L)-c.latteAddCost-(c.retail.latte*c.fees.menu/100),
+            milk:c.retail.milk-supplyMilk750-(c.retail.milk*c.fees.goods/100),
+            yogurt:c.retail.yogurt-supplyYogurt500-(c.retail.yogurt*c.fees.goods/100)
+        };
+
+        store.results={
+            ranch:{dailyProdPerCow:n.predYield,dailyProd,monthlyProd,volNapyu,volProcessing,rev:revRanch,cost:ranchExp,profit:profitRanch,costFeed,costPerLiter,feedCostPerLiter},
+            factory:{inputVol,production:{mix:prodMix,latteMilk:prodLatteMilk,milk750:prodMilk750,yogurt500:prodYogurt500},channel:{cafe:{mix:volMixCafe,latteMilk:volLatteMilkCafe,milk750:volMilk750Cafe,yogurt500:volYogurt500Cafe},d2c:{milk750:volMilk750D2C,yogurt500:volYogurt500D2C}},unitCost:{mix:costMixPerL,latteMilk20L:costLatteMilkPerL*20,milk750:costMilk750PerUnit,yogurt500:costYogurt500PerUnit},supply:{mix:supplyMix,latteMilk20L:supplyLatteMilk20L,milk750:supplyMilk750,yogurt500:supplyYogurt500},d2cPrice:{milk750:d2cPriceMilk,yogurt500:d2cPriceYogurt},rev:factoryRev,revCafe:factRevFromCafe,revD2C:factRevD2C,cost:{raw:factRawCost,labor:factLaborCost,material:factMaterialCost,utility:factUtilityCost,packaging:factPackagingCost,variable:factVarCost,fixed:f.fixedCost,total:factTotalCost},profit:factoryProfit},
+            cafe:{units:{iceCream:unitsIceCream,latte:unitsLatte,milk:unitsMilk,yogurt:unitsYogurt},revDetail:{iceCream:revIceCream,latte:revLatte,milk:revMilk,yogurt:revYogurt},rev:cafeRev,cogs:cafeCOGS,gross:cafeGross,fees:cafeFees,feeDetails:{menu:feeMenu,goods:feeGoods},fixed:cafeFixed,costLabor:c.costLabor,costOps:c.costOps,profit:cafeProfit,unitProfits}
+        };
+        return store.results;
+    }
+};
+
+const app={
+    init:()=>{logic.calc();app.navigate('ranch');},
+    navigate:(view)=>{store.view=view;['ranch','factory','sales','dashboard'].forEach(id=>{const el=document.getElementById('nav-'+id);if(el){el.className='tab-btn';if(id===view)el.classList.add('tab-active');}});app.render();},
+    updateStatus:(data)=>{if(!data)return;const total=data.ranch.profit+data.factory.profit+data.cafe.profit;document.getElementById('st-ranch').innerText=app.fmt(data.ranch.profit);document.getElementById('st-factory').innerText=app.fmt(data.factory.profit);document.getElementById('st-cafe').innerText=app.fmt(data.cafe.profit);document.getElementById('st-total').innerText=app.fmt(total);},
+    render:()=>{try{const data=logic.calc();if(!data)return;app.updateStatus(data);const main=document.getElementById('main-content');if(main){main.innerHTML='';if(store.view==='ranch')app.views.ranch(main,data);if(store.view==='factory')app.views.factory(main,data);if(store.view==='sales')app.views.cafe(main,data);if(store.view==='dashboard')app.views.dashboard(main,data);}}catch(e){console.error(e);}},
+    fmt:(n)=>'₩ '+Math.round(n).toLocaleString(),
+    fmtL:(n)=>Math.round(n).toLocaleString()+'L',
+    ui:{
+        slider:(mod,key,label,min,max,step,val,color='')=>'<div class="mb-2"><div class="flex justify-between text-xs font-bold text-slate-600 mb-1"><span>'+label+'</span><span class="'+color+'">'+(typeof val==='number'?val.toLocaleString():val)+'</span></div><input type="range" min="'+min+'" max="'+max+'" step="'+step+'" value="'+val+'" class="'+color+'" oninput="store.'+mod+'.'+key+'=parseFloat(this.value);app.render()"></div>',
+        sliderNested:(path,label,min,max,step,val,color='')=>'<div class="mb-2"><div class="flex justify-between text-xs font-bold text-slate-600 mb-1"><span>'+label+'</span><span class="'+color+'">'+(typeof val==='number'?val.toLocaleString():val)+'</span></div><input type="range" min="'+min+'" max="'+max+'" step="'+step+'" value="'+val+'" class="'+color+'" oninput="'+path+'=parseFloat(this.value);app.render()"></div>',
+        sliderBox:(mod,key,label,min,max,step,val,color='')=>'<div class="bg-slate-50 p-3 rounded border"><h4 class="font-bold text-xs text-slate-500 mb-2">'+label+'</h4><div class="flex justify-between text-sm font-bold '+color+' mb-1"><span>단가</span><span class="bg-white px-1 rounded">'+val.toLocaleString()+'</span></div><input type="range" min="'+min+'" max="'+max+'" step="'+step+'" value="'+val+'" oninput="store.'+mod+'.'+key+'=parseInt(this.value);app.render()"></div>',
+        input:(path,label,val)=>'<div class="flex flex-col"><span class="text-[10px] text-slate-500">'+label+'</span><input type="number" class="w-full p-1 border rounded text-right font-bold text-sm" value="'+val+'" onchange="'+path+'=parseFloat(this.value);app.render()"></div>'
+    },
+    charts:{
+        destroy:(id)=>{if(chartInstances[id]){chartInstances[id].destroy();delete chartInstances[id];}},
+        nutriChart:(id,n)=>{const el=document.getElementById(id);if(!el)return;const ctx=el.getContext('2d');app.charts.destroy(id);chartInstances[id]=new Chart(ctx,{type:'bar',data:{labels:['유량','CP÷100','에너지','DMI'],datasets:[{label:'목표',data:[store.ranch.yield,n.reqProtein/100,n.reqEnergy,n.limitDMI],backgroundColor:'#cbd5e1',barPercentage:0.7},{label:'실제',data:[n.predYield,n.supProtein/100,n.supEnergy,n.actualDMI],backgroundColor:(ctx)=>{const idx=ctx.dataIndex;const val=ctx.raw;const target=ctx.chart.data.datasets[0].data[idx];if(idx===3&&val>target)return'#ef4444';if(val<target*0.95)return'#f59e0b';return'#10b981';},barPercentage:0.7}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{boxWidth:10,font:{size:10}}}},scales:{y:{beginAtZero:true}}}});},
+        waterfall:(id,res)=>{const el=document.getElementById(id);if(!el)return;const ctx=el.getContext('2d');app.charts.destroy(id);chartInstances[id]=new Chart(ctx,{type:'bar',data:{labels:['매출','원가','수수료','고정비','이익'],datasets:[{data:[res.rev,-res.cogs,-res.fees,-res.fixed,res.profit],backgroundColor:['#3b82f6','#ef4444','#f59e0b','#f97316',res.profit>=0?'#10b981':'#ef4444'],borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});},
+        profitPie:(id,data)=>{const el=document.getElementById(id);if(!el)return;const ctx=el.getContext('2d');app.charts.destroy(id);chartInstances[id]=new Chart(ctx,{type:'doughnut',data:{labels:['목장','공장','카페'],datasets:[{data:[Math.max(0,data.ranch.profit),Math.max(0,data.factory.profit),Math.max(0,data.cafe.profit)],backgroundColor:['#f59e0b','#3b82f6','#10b981'],borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}}});},
+        channelChart:(id,data)=>{const el=document.getElementById(id);if(!el)return;const ctx=el.getContext('2d');app.charts.destroy(id);const ch=data.factory.channel;chartInstances[id]=new Chart(ctx,{type:'bar',data:{labels:['믹스','라떼시유','시유750','요거트500'],datasets:[{label:'카페',data:[ch.cafe.mix,ch.cafe.latteMilk,ch.cafe.milk750,ch.cafe.yogurt500],backgroundColor:'#10b981'},{label:'D2C',data:[0,0,ch.d2c.milk750,ch.d2c.yogurt500],backgroundColor:'#3b82f6'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{boxWidth:10,font:{size:10}}}},scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:(v)=>v+'L'}}}}});}
+    },
+    views:{
+        ranch:(cont,data)=>{
+            const r=store.ranch,res=data.ranch,n=r.nutri,ai=r.aiRec||{};
+            cont.innerHTML='<div class="grid grid-cols-1 lg:grid-cols-2 gap-6"><div class="card border-l-4 border-amber-500"><h2 class="text-lg font-bold text-amber-900 mb-3 flex justify-between"><span>🧬 배합비</span><div class="flex gap-2"><div class="indicator '+(n.omegaRatio<=2?'ind-good':n.omegaRatio<=4?'ind-warn':'ind-bad')+'">ω '+n.omegaRatio.toFixed(1)+':1</div><div class="indicator '+(n.grainPct<25?'ind-good':n.grainPct<35?'ind-warn':'ind-bad')+'">곡물 '+n.grainPct.toFixed(1)+'%</div></div></h2><div class="bg-white p-3 rounded border mb-4"><div class="flex justify-between text-xs font-bold mb-1"><span class="text-green-700">🌿 조사료 '+n.foragePct.toFixed(1)+'%</span><span class="text-red-700">🌽 곡물 '+n.grainPct.toFixed(1)+'%</span></div><div class="w-full h-4 bg-gray-200 rounded-full flex relative"><div class="h-full bg-green-500" style="width:'+n.foragePct+'%"></div><div class="h-full bg-red-400" style="width:'+n.grainPct+'%"></div><div class="absolute top-0 bottom-0 w-0.5 bg-black" style="left:75%"></div></div></div><div class="h-48 w-full mb-4"><canvas id="chartNutri"></canvas></div><div class="bg-amber-50 p-2 rounded mb-2"><h4 class="font-bold text-xs text-amber-700 mb-1">🐄 착유우 TMR</h4><table class="tmr-table"><thead><tr><th>원료</th><th>설정</th><th class="ai-col">AI</th><th>단가</th><th>비용</th></tr></thead><tbody>'+Object.entries(r.tmrMilking).map(([k,i])=>{const meta=nutriDB[i.dbKey];return'<tr><td class="text-left pl-2 font-bold '+(meta&&meta.type==='roughage'?'text-green-700':'text-red-700')+'">'+(meta?meta.name:k)+'</td><td><input type="number" value="'+i.asFed+'" step="0.1" class="text-blue-700" oninput="store.ranch.tmrMilking.'+k+'.asFed=parseFloat(this.value)||0;app.render()"></td><td class="ai-col text-xs">'+(ai[k]?ai[k].toFixed(1):'-')+'</td><td><input type="number" value="'+i.price+'" class="text-slate-500" oninput="store.ranch.tmrMilking.'+k+'.price=parseInt(this.value)||0;app.render()"></td><td class="text-slate-400">'+Math.round(i.asFed*i.price).toLocaleString()+'</td></tr>';}).join('')+'<tr class="tmr-total"><td>합계</td><td>'+n.mAsFed.toFixed(1)+'kg</td><td class="ai-col">-</td><td>-</td><td class="text-red-600">'+app.fmt(n.mCost)+'/일</td></tr></tbody></table></div><div class="bg-slate-50 p-2 rounded"><h4 class="font-bold text-xs text-slate-700 mb-1">🐂 육성우 TMR</h4><table class="tmr-table"><thead><tr><th>원료</th><th>급여량</th><th>단가</th><th>비용</th></tr></thead><tbody>'+Object.entries(r.tmrHeifer).map(([k,i])=>{const meta=nutriDB[i.dbKey];return'<tr><td class="text-left pl-2">'+(meta?meta.name:k)+'</td><td><input type="number" value="'+i.asFed+'" step="0.1" oninput="store.ranch.tmrHeifer.'+k+'.asFed=parseFloat(this.value)||0;app.render()"></td><td><input type="number" value="'+i.price+'" oninput="store.ranch.tmrHeifer.'+k+'.price=parseInt(this.value)||0;app.render()"></td><td class="text-slate-400">'+Math.round(i.asFed*i.price).toLocaleString()+'</td></tr>';}).join('')+'<tr class="tmr-total"><td>합계</td><td>-</td><td>-</td><td class="text-amber-600">'+app.fmt(store.ranch.feedHeiferDaily)+'</td></tr></tbody></table></div></div><div class="flex flex-col gap-4"><div class="card"><h2 class="text-lg font-bold text-slate-700 mb-4">⚙️ 목장 설정</h2><div class="grid grid-cols-2 gap-3 mb-4">'+app.ui.input('store.ranch.yield','목표유량',r.yield)+app.ui.input('store.ranch.bodyWeight','체중',r.bodyWeight)+app.ui.input('store.ranch.fat','유지방%',r.fat)+app.ui.input('store.ranch.protein','유단백%',r.protein)+'</div><div class="grid grid-cols-2 gap-4 mt-2 mb-2">'+app.ui.sliderBox('ranch','napyuPrice','납유단가',900,1500,10,r.napyuPrice)+app.ui.sliderBox('ranch','transferPrice','이체단가',2500,5500,50,r.transferPrice,'text-blue-600')+'</div>'+app.ui.slider('ranch','processingRatio','가공비율%',0,100,5,r.processingRatio,'text-blue-600')+app.ui.slider('ranch','cows','착유우',1,100,1,r.cows)+app.ui.slider('ranch','heifers','육성우',0,50,1,r.heifers)+app.ui.slider('ranch','fixedCost','고정비',5000000,30000000,1000000,r.fixedCost,'text-red-500')+'</div><div class="card bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200"><h3 class="font-bold text-amber-900 mb-3">🥛 일일 생산량</h3><div class="grid grid-cols-3 gap-3"><div class="bg-white p-3 rounded-lg border border-amber-200 text-center"><div class="text-[10px] text-slate-500 font-bold">예상유량(배합비)</div><div class="text-2xl font-black text-amber-600 val">'+n.predYield.toFixed(1)+'<span class="text-sm">kg</span></div><div class="text-[10px] text-slate-400">×'+r.cows+'두=<strong class="text-amber-700">'+res.dailyProd.toFixed(0)+'L/일</strong></div></div><div class="bg-white p-3 rounded-lg border border-blue-200 text-center"><div class="text-[10px] text-slate-500 font-bold">납유량('+(100-r.processingRatio)+'%)</div><div class="text-2xl font-black text-blue-600 val">'+(res.dailyProd*(100-r.processingRatio)/100).toFixed(0)+'<span class="text-sm">L</span></div><div class="text-[10px] text-slate-400">@'+r.napyuPrice.toLocaleString()+'원</div></div><div class="bg-white p-3 rounded-lg border border-emerald-200 text-center"><div class="text-[10px] text-slate-500 font-bold">이체량('+r.processingRatio+'%)</div><div class="text-2xl font-black text-emerald-600 val">'+(res.dailyProd*r.processingRatio/100).toFixed(0)+'<span class="text-sm">L</span></div><div class="text-[10px] text-slate-400">@'+r.transferPrice.toLocaleString()+'원</div></div></div><div class="mt-3 flex justify-between items-center text-xs"><div class="flex items-center gap-2"><span class="text-slate-500">목표:</span><span class="font-bold">'+r.yield+'kg</span><span class="px-2 py-0.5 rounded '+(n.predYield>=r.yield?'bg-green-100 text-green-700':'bg-red-100 text-red-700')+'">'+(n.predYield>=r.yield?'✓달성':'✗'+(n.predYield-r.yield).toFixed(1)+'kg')+'</span></div><div class="text-slate-500">일일매출: <strong class="text-amber-700">'+app.fmt(res.dailyProd*(100-r.processingRatio)/100*r.napyuPrice+res.dailyProd*r.processingRatio/100*r.transferPrice)+'</strong></div></div></div><div class="card flex-grow"><h3 class="font-bold text-slate-700 mb-2 border-b pb-2 flex justify-between"><span>📋 목장 손익</span><span class="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded">1L당:'+Math.round(res.costPerLiter)+'원</span></h3><table class="acc-table"><tr class="total-row"><td>Ⅰ.매출</td><td class="text-blue-600 val">'+app.fmt(res.rev)+'</td></tr><tr class="sub-row"><td>-납유('+app.fmtL(res.volNapyu)+')</td><td>'+app.fmt(res.volNapyu*r.napyuPrice)+'</td></tr><tr class="sub-row"><td>-이체('+app.fmtL(res.volProcessing)+')</td><td>'+app.fmt(res.volProcessing*r.transferPrice)+'</td></tr><tr class="total-row"><td>Ⅱ.비용</td><td class="text-red-500">('+app.fmt(res.cost)+')</td></tr><tr class="sub-row"><td>-사료비</td><td>'+app.fmt(res.costFeed)+'</td></tr><tr class="sub-row"><td>-고정비</td><td>'+app.fmt(r.fixedCost)+'</td></tr><tr class="total-row bg-amber-50"><td>Ⅲ.순이익</td><td class="text-amber-600 val text-lg">'+app.fmt(res.profit)+'</td></tr></table></div></div></div>';
+            setTimeout(()=>app.charts.nutriChart('chartNutri',n),0);
+        },
+        factory:(cont,data)=>{
+            const f=store.factory,res=data.factory,pa=f.productAlloc,cc=f.channelCafe,fc=f.cost,mr=f.marginRate;
+            cont.innerHTML='<div class="grid grid-cols-1 lg:grid-cols-2 gap-6"><div class="card"><h2 class="text-lg font-bold text-blue-900 mb-4">🏭 공장 생산</h2><div class="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-4"><h4 class="font-bold text-sm text-blue-900 mb-2">📦 이체 원유량</h4><div class="text-center"><div class="text-3xl font-black text-blue-700 val">'+app.fmtL(res.inputVol)+'</div><div class="text-xs text-slate-500">월간 가공량</div></div></div><div class="bg-indigo-50 p-4 rounded-lg border border-indigo-200 mb-4"><h4 class="font-bold text-sm text-indigo-900 mb-3">🍦 제품별 생산비율(%)</h4>'+app.ui.sliderNested('store.factory.productAlloc.mix','🍨 믹스(카페전용)',0,50,5,pa.mix,'text-pink-600')+app.ui.sliderNested('store.factory.productAlloc.latteMilk','☕ 라떼시유20L(카페전용)',0,50,5,pa.latteMilk,'text-amber-600')+app.ui.sliderNested('store.factory.productAlloc.milk750','🥛 시유750ml(D2C+카페)',0,80,5,pa.milk750,'text-blue-600')+app.ui.sliderNested('store.factory.productAlloc.yogurt500','🍶 요거트500ml(D2C+카페)',0,80,5,pa.yogurt500,'text-emerald-600')+'<div class="text-xs text-right mt-2 '+((pa.mix+pa.latteMilk+pa.milk750+pa.yogurt500)===100?'text-green-600':'text-red-600')+' font-bold">합계:'+(pa.mix+pa.latteMilk+pa.milk750+pa.yogurt500)+'% '+((pa.mix+pa.latteMilk+pa.milk750+pa.yogurt500)===100?'✓':'(100%필요)')+'</div></div><div class="bg-emerald-50 p-4 rounded-lg border border-emerald-200 mb-4"><h4 class="font-bold text-sm text-emerald-900 mb-3">🏪 시유/요거트 카페배분(%)</h4>'+app.ui.sliderNested('store.factory.channelCafe.milk750','🥛 시유→카페',0,100,5,cc.milk750,'text-emerald-600')+'<div class="text-xs text-slate-500 mb-2">D2C:'+(100-cc.milk750)+'% ('+app.fmtL(res.channel.d2c.milk750)+')</div>'+app.ui.sliderNested('store.factory.channelCafe.yogurt500','🍶 요거트→카페',0,100,5,cc.yogurt500,'text-emerald-600')+'<div class="text-xs text-slate-500">D2C:'+(100-cc.yogurt500)+'% ('+app.fmtL(res.channel.d2c.yogurt500)+')</div></div><div class="h-48 mb-4"><canvas id="chartChannel"></canvas></div></div><div class="flex flex-col gap-4"><div class="card"><h3 class="font-bold text-slate-700 mb-3">💰 가공비(원/L)</h3><div class="grid grid-cols-2 gap-3">'+app.ui.sliderNested('store.factory.cost.labor','👷 인건비',100,500,10,fc.labor)+app.ui.sliderNested('store.factory.cost.material','📦 부재료비',50,300,10,fc.material)+app.ui.sliderNested('store.factory.cost.utility','⚡ 유틸리티',50,300,10,fc.utility)+app.ui.sliderNested('store.factory.cost.packaging','🎁 포장재(개당)',200,800,50,fc.packaging)+'</div>'+app.ui.sliderNested('store.factory.cost.mixAdditive','🍨 믹스추가원료',1000,5000,100,fc.mixAdditive,'text-pink-600')+app.ui.sliderNested('store.factory.lossRate','📉 손실율%',0,15,1,f.lossRate,'text-red-500')+app.ui.sliderNested('store.factory.fixedCost','🏢 고정비',3000000,15000000,500000,f.fixedCost,'text-red-500')+'</div><div class="card"><h3 class="font-bold text-slate-700 mb-3">📊 마진율(%)</h3><div class="grid grid-cols-2 gap-3">'+app.ui.sliderNested('store.factory.marginRate.mix','🍨 믹스',10,50,5,mr.mix,'text-pink-600')+app.ui.sliderNested('store.factory.marginRate.latteMilk','☕ 라떼시유',10,50,5,mr.latteMilk,'text-amber-600')+app.ui.sliderNested('store.factory.marginRate.milk750','🥛 시유750',10,50,5,mr.milk750,'text-blue-600')+app.ui.sliderNested('store.factory.marginRate.yogurt500','🍶 요거트',10,50,5,mr.yogurt500,'text-emerald-600')+'</div></div><div class="card bg-slate-50"><h3 class="font-bold text-blue-900 text-sm mb-2">🧾 원가&납품가</h3><table class="acc-table bg-white rounded-lg text-xs"><thead class="bg-blue-100"><tr><th>제품</th><th>생산량</th><th>원가</th><th>납품가</th><th>마진</th></tr></thead><tbody><tr class="bg-pink-50"><td>🍨 믹스(1L)</td><td>'+app.fmtL(res.production.mix)+'</td><td>'+Math.round(res.unitCost.mix).toLocaleString()+'</td><td class="font-bold text-blue-700">'+res.supply.mix.toLocaleString()+'</td><td class="text-green-600">'+mr.mix+'%</td></tr><tr class="bg-amber-50"><td>☕ 라떼시유(20L)</td><td>'+app.fmtL(res.production.latteMilk)+'</td><td>'+Math.round(res.unitCost.latteMilk20L).toLocaleString()+'</td><td class="font-bold text-blue-700">'+res.supply.latteMilk20L.toLocaleString()+'</td><td class="text-green-600">'+mr.latteMilk+'%</td></tr><tr><td>🥛 시유(750ml)</td><td>'+app.fmtL(res.production.milk750)+'</td><td>'+Math.round(res.unitCost.milk750).toLocaleString()+'</td><td class="font-bold text-blue-700">'+res.supply.milk750.toLocaleString()+'</td><td class="text-green-600">'+mr.milk750+'%</td></tr><tr class="bg-emerald-50"><td>🍶 요거트(500ml)</td><td>'+app.fmtL(res.production.yogurt500)+'</td><td>'+Math.round(res.unitCost.yogurt500).toLocaleString()+'</td><td class="font-bold text-blue-700">'+res.supply.yogurt500.toLocaleString()+'</td><td class="text-green-600">'+mr.yogurt500+'%</td></tr></tbody></table></div><div class="card flex-grow"><h3 class="font-bold text-slate-700 mb-2 border-b pb-2">📋 공장 손익</h3><table class="acc-table text-sm"><tr class="total-row"><td>Ⅰ.매출</td><td class="text-blue-600 val">'+app.fmt(res.rev)+'</td></tr><tr class="sub-row"><td>-카페납품</td><td>'+app.fmt(res.revCafe)+'</td></tr><tr class="sub-row"><td>-D2C판매</td><td>'+app.fmt(res.revD2C)+'</td></tr><tr class="total-row"><td>Ⅱ.매출원가</td><td class="text-red-500">('+app.fmt(res.cost.raw+res.cost.variable)+')</td></tr><tr class="sub-row"><td>-원유매입</td><td>'+app.fmt(res.cost.raw)+'</td></tr><tr class="sub-row"><td>-인건비</td><td>'+app.fmt(res.cost.labor)+'</td></tr><tr class="sub-row"><td>-부재료비</td><td>'+app.fmt(res.cost.material)+'</td></tr><tr class="sub-row"><td>-유틸리티</td><td>'+app.fmt(res.cost.utility)+'</td></tr><tr class="sub-row"><td>-포장재</td><td>'+app.fmt(res.cost.packaging)+'</td></tr><tr class="total-row"><td>Ⅲ.고정비</td><td class="text-red-500">('+app.fmt(res.cost.fixed)+')</td></tr><tr class="total-row bg-blue-50"><td>Ⅳ.영업이익</td><td class="text-blue-600 val text-lg">'+app.fmt(res.profit)+'</td></tr></table></div></div></div>';
+            setTimeout(()=>app.charts.channelChart('chartChannel',data),0);
+        },
+        cafe:(cont,data)=>{
+            const c=store.cafe,res=data.cafe,unitP=res.unitProfits,fres=data.factory;
+            cont.innerHTML='<div class="grid grid-cols-1 lg:grid-cols-2 gap-6"><div class="card"><h2 class="text-lg font-bold text-emerald-800 mb-4">☕ 카페 운영</h2><div class="bg-emerald-50 p-4 rounded-lg border border-emerald-200 mb-4"><h4 class="font-bold text-sm text-emerald-900 mb-3">📦 공장 납품물량</h4><div class="grid grid-cols-2 gap-2 text-xs"><div class="bg-white p-2 rounded border flex justify-between"><span>🍨 믹스</span><strong>'+app.fmtL(fres.channel.cafe.mix)+'</strong></div><div class="bg-white p-2 rounded border flex justify-between"><span>☕ 라떼시유</span><strong>'+app.fmtL(fres.channel.cafe.latteMilk)+'</strong></div><div class="bg-white p-2 rounded border flex justify-between"><span>🥛 시유750</span><strong>'+app.fmtL(fres.channel.cafe.milk750)+'</strong></div><div class="bg-white p-2 rounded border flex justify-between"><span>🍶 요거트500</span><strong>'+app.fmtL(fres.channel.cafe.yogurt500)+'</strong></div></div></div><h4 class="font-bold text-sm text-slate-600 mb-2">💰 판매가</h4><div class="grid grid-cols-2 gap-4 mb-4">'+app.ui.sliderNested('store.cafe.retail.iceCream','🍦 아이스크림',4000,10000,500,c.retail.iceCream)+app.ui.sliderNested('store.cafe.retail.latte','☕ 라떼',5000,12000,500,c.retail.latte)+app.ui.sliderNested('store.cafe.retail.milk','🥛 우유750ml',6000,15000,500,c.retail.milk)+app.ui.sliderNested('store.cafe.retail.yogurt','🍶 요거트500ml',6000,15000,500,c.retail.yogurt)+'</div><div class="bg-orange-50 p-3 rounded border mb-4"><h4 class="font-bold text-sm text-orange-800 mb-2">☕ 라떼 부재료</h4>'+app.ui.sliderNested('store.cafe.latteAddCost','커피원두/시럽(원/잔)',500,3000,100,c.latteAddCost,'text-orange-600')+'</div><div class="bg-red-50 p-4 rounded-lg border border-red-200 mb-4"><h4 class="font-bold text-sm text-red-800 mb-2">💸 수수료(고정)</h4><div class="grid grid-cols-2 gap-4 text-sm"><div class="bg-white p-3 rounded border text-center"><div class="text-xs text-slate-500">카페메뉴(아이스크림/라떼)</div><div class="text-2xl font-black text-red-600">'+c.fees.menu+'%</div><div class="text-xs text-red-500">'+app.fmt(res.feeDetails.menu)+'</div></div><div class="bg-white p-3 rounded border text-center"><div class="text-xs text-slate-500">제품(시유/요거트)</div><div class="text-2xl font-black text-red-600">'+c.fees.goods+'%</div><div class="text-xs text-red-500">'+app.fmt(res.feeDetails.goods)+'</div></div></div></div><h4 class="font-bold text-sm text-slate-600 mb-2">🏢 고정비</h4>'+app.ui.sliderNested('store.cafe.costLabor','인건비',2000000,10000000,100000,c.costLabor,'text-red-500')+app.ui.sliderNested('store.cafe.costOps','운영비',500000,5000000,100000,c.costOps,'text-red-500')+'</div><div class="card flex flex-col"><h3 class="font-bold text-slate-700 mb-3 border-b pb-2">📊 메뉴별 현황</h3><div class="grid grid-cols-2 gap-3 mb-4"><div class="product-card"><div class="flex justify-between items-center mb-2"><span class="font-bold">🍦 아이스크림</span><span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">수수료25%</span></div><div class="text-xs text-slate-500">판매:'+Math.round(res.units.iceCream).toLocaleString()+'개</div><div class="text-xs text-slate-500">매출:'+app.fmt(res.revDetail.iceCream)+'</div><div class="text-sm font-bold mt-1 '+(unitP.iceCream>=0?'text-green-600':'text-red-600')+'">개당이익:'+app.fmt(unitP.iceCream)+'</div></div><div class="product-card"><div class="flex justify-between items-center mb-2"><span class="font-bold">☕ 라떼</span><span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">수수료25%</span></div><div class="text-xs text-slate-500">판매:'+Math.round(res.units.latte).toLocaleString()+'잔</div><div class="text-xs text-slate-500">매출:'+app.fmt(res.revDetail.latte)+'</div><div class="text-sm font-bold mt-1 '+(unitP.latte>=0?'text-green-600':'text-red-600')+'">잔당이익:'+app.fmt(unitP.latte)+'</div></div><div class="product-card"><div class="flex justify-between items-center mb-2"><span class="font-bold">🥛 시유750ml</span><span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded">수수료15%</span></div><div class="text-xs text-slate-500">판매:'+Math.round(res.units.milk).toLocaleString()+'병</div><div class="text-xs text-slate-500">매출:'+app.fmt(res.revDetail.milk)+'</div><div class="text-sm font-bold mt-1 '+(unitP.milk>=0?'text-green-600':'text-red-600')+'">병당이익:'+app.fmt(unitP.milk)+'</div></div><div class="product-card"><div class="flex justify-between items-center mb-2"><span class="font-bold">🍶 요거트500ml</span><span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded">수수료15%</span></div><div class="text-xs text-slate-500">판매:'+Math.round(res.units.yogurt).toLocaleString()+'병</div><div class="text-xs text-slate-500">매출:'+app.fmt(res.revDetail.yogurt)+'</div><div class="text-sm font-bold mt-1 '+(unitP.yogurt>=0?'text-green-600':'text-red-600')+'">병당이익:'+app.fmt(unitP.yogurt)+'</div></div></div><div class="flex-grow"><h3 class="font-bold text-slate-700 mb-2 border-b pb-2">📋 카페 손익</h3><table class="acc-table text-sm"><tr class="total-row"><td>Ⅰ.매출</td><td class="text-emerald-600 val text-lg">'+app.fmt(res.rev)+'</td></tr><tr class="sub-row"><td>-아이스크림</td><td>'+app.fmt(res.revDetail.iceCream)+'</td></tr><tr class="sub-row"><td>-라떼</td><td>'+app.fmt(res.revDetail.latte)+'</td></tr><tr class="sub-row"><td>-시유</td><td>'+app.fmt(res.revDetail.milk)+'</td></tr><tr class="sub-row"><td>-요거트</td><td>'+app.fmt(res.revDetail.yogurt)+'</td></tr><tr class="total-row"><td>Ⅱ.매출원가</td><td class="text-red-500">('+app.fmt(res.cogs)+')</td></tr><tr class="total-row bg-slate-50"><td>Ⅲ.매출총이익</td><td class="val">'+app.fmt(res.gross)+'</td></tr><tr class="total-row"><td>Ⅳ.판관비</td><td class="text-red-500">('+app.fmt(res.fees+res.fixed)+')</td></tr><tr class="sub-row"><td>-수수료(메뉴25%)</td><td>'+app.fmt(res.feeDetails.menu)+'</td></tr><tr class="sub-row"><td>-수수료(제품15%)</td><td>'+app.fmt(res.feeDetails.goods)+'</td></tr><tr class="sub-row"><td>-인건비</td><td>'+app.fmt(res.costLabor)+'</td></tr><tr class="sub-row"><td>-운영비</td><td>'+app.fmt(res.costOps)+'</td></tr><tr class="total-row bg-emerald-100"><td class="font-black text-emerald-900">Ⅴ.영업이익</td><td class="font-black val text-xl '+(res.profit>=0?'text-emerald-700':'text-red-600')+'">'+app.fmt(res.profit)+'</td></tr></table></div><div class="mt-4 h-40"><canvas id="chartCafe"></canvas></div></div></div>';
+            setTimeout(()=>app.charts.waterfall('chartCafe',res),0);
+        },
+        dashboard:(cont,data)=>{
+            const total=data.ranch.profit+data.factory.profit+data.cafe.profit;
+            const totalRev=data.ranch.rev+data.factory.rev+data.cafe.rev;
+            cont.innerHTML='<div class="grid grid-cols-1 md:grid-cols-3 gap-6"><div class="card bg-slate-800 text-white md:col-span-3 flex justify-between items-center"><div><h2 class="text-2xl font-bold text-amber-400">송영신목장 통합 결산 V56</h2><p class="text-slate-400 text-sm">Factory & Cafe Redesign</p></div><div class="text-right"><div class="text-xs text-slate-400">Monthly Net Income</div><div class="text-4xl font-black val '+(total>=0?'text-emerald-400':'text-red-400')+'">'+app.fmt(total)+'</div></div></div><div class="card border-l-4 border-amber-500"><div class="text-xs text-slate-500 font-bold">RANCH</div><div class="text-xl font-bold val mt-1 '+(data.ranch.profit>=0?'text-amber-700':'text-red-600')+'">'+app.fmt(data.ranch.profit)+'</div><div class="text-[10px] text-slate-400 mt-2">매출:'+app.fmt(data.ranch.rev)+' | 이익률:'+((data.ranch.profit/data.ranch.rev)*100).toFixed(1)+'%</div></div><div class="card border-l-4 border-blue-500"><div class="text-xs text-slate-500 font-bold">FACTORY</div><div class="text-xl font-bold val mt-1 '+(data.factory.profit>=0?'text-blue-700':'text-red-600')+'">'+app.fmt(data.factory.profit)+'</div><div class="text-[10px] text-slate-400 mt-2">매출:'+app.fmt(data.factory.rev)+' | 이익률:'+((data.factory.profit/data.factory.rev)*100).toFixed(1)+'%</div></div><div class="card border-l-4 border-emerald-500"><div class="text-xs text-slate-500 font-bold">CAFE</div><div class="text-xl font-bold val mt-1 '+(data.cafe.profit>=0?'text-emerald-700':'text-red-600')+'">'+app.fmt(data.cafe.profit)+'</div><div class="text-[10px] text-slate-400 mt-2">매출:'+app.fmt(data.cafe.rev)+' | 이익률:'+((data.cafe.profit/data.cafe.rev)*100).toFixed(1)+'%</div></div><div class="card md:col-span-2"><h3 class="font-bold text-slate-700 mb-4">📊 수익구조</h3><div class="grid grid-cols-3 gap-4 text-center"><div class="bg-amber-50 p-3 rounded"><div class="text-xs text-amber-600 font-bold">목장기여</div><div class="text-lg font-black text-amber-700">'+(total>0?((data.ranch.profit/total)*100).toFixed(1):0)+'%</div></div><div class="bg-blue-50 p-3 rounded"><div class="text-xs text-blue-600 font-bold">공장기여</div><div class="text-lg font-black text-blue-700">'+(total>0?((data.factory.profit/total)*100).toFixed(1):0)+'%</div></div><div class="bg-emerald-50 p-3 rounded"><div class="text-xs text-emerald-600 font-bold">카페기여</div><div class="text-lg font-black text-emerald-700">'+(total>0?((data.cafe.profit/total)*100).toFixed(1):0)+'%</div></div></div><div class="h-48 mt-4"><canvas id="chartProfit"></canvas></div></div><div class="card"><h3 class="font-bold text-slate-700 mb-4">🔑 핵심 KPI</h3><div class="space-y-3 text-sm"><div class="flex justify-between items-center p-2 bg-slate-50 rounded"><span class="text-slate-600">일일생산량</span><span class="font-bold">'+data.ranch.dailyProd.toFixed(0)+' L</span></div><div class="flex justify-between items-center p-2 bg-slate-50 rounded"><span class="text-slate-600">월간가공량</span><span class="font-bold">'+app.fmtL(data.factory.inputVol)+'</span></div><div class="flex justify-between items-center p-2 bg-slate-50 rounded"><span class="text-slate-600">원유원가</span><span class="font-bold">'+Math.round(data.ranch.costPerLiter).toLocaleString()+' 원/L</span></div><div class="flex justify-between items-center p-2 bg-slate-50 rounded"><span class="text-slate-600">사료원가</span><span class="font-bold">'+Math.round(data.ranch.feedCostPerLiter).toLocaleString()+' 원/L</span></div><div class="flex justify-between items-center p-2 '+(total>=0?'bg-emerald-50':'bg-red-50')+' rounded"><span class="'+(total>=0?'text-emerald-600':'text-red-600')+'">통합이익률</span><span class="font-bold '+(total>=0?'text-emerald-800':'text-red-800')+'">'+(totalRev>0?((total/totalRev)*100).toFixed(1):0)+'%</span></div></div></div><div class="md:col-span-3 card bg-indigo-50 border-indigo-200 cursor-pointer flex items-center justify-between group" onclick="app.showAIReport()"><div class="flex items-center gap-4"><div class="bg-indigo-600 text-white p-3 rounded-full text-2xl">🤖</div><div><h3 class="font-bold text-indigo-900">AI 경영 진단</h3><p class="text-xs text-indigo-700">TMR 최적화 및 통합 수익성 분석</p></div></div><div class="text-indigo-600 font-bold">분석 →</div></div></div>';
+            setTimeout(()=>app.charts.profitPie('chartProfit',data),0);
+        }
+    },
+    showAIReport:()=>{
+        const modal=document.getElementById('aiModal');
+        const content=document.getElementById('aiModalContent');
+        modal.classList.remove('hidden');
+        const data=store.results,r=store.ranch,n=r.nutri;
+        const total=data.ranch.profit+data.factory.profit+data.cafe.profit;
+        const pa=store.factory.productAlloc;
+        let report='<h2 class="text-xl font-bold text-indigo-900 mb-4">📊 경영 진단</h2><h3 class="text-lg font-bold mt-6 mb-2">1. 🐄 TMR</h3><div class="bg-slate-50 p-4 rounded-lg mb-4"><p><strong>에너지:</strong> '+((n.supEnergy/n.reqEnergy)*100).toFixed(1)+'% '+(n.supEnergy>=n.reqEnergy?'✅':'⚠️')+'</p><p><strong>단백질:</strong> '+((n.supProtein/n.reqProtein)*100).toFixed(1)+'% '+(n.supProtein>=n.reqProtein?'✅':'⚠️')+'</p><p><strong>DMI:</strong> '+n.actualDMI.toFixed(1)+'/'+n.limitDMI.toFixed(1)+'kg '+(n.actualDMI<=n.limitDMI?'✅':'🚨')+'</p><p><strong>오메가:</strong> '+n.omegaRatio.toFixed(1)+':1 '+(n.omegaRatio<=2?'🌟':n.omegaRatio<=4?'✅':'⚠️')+'</p><p><strong>조사료:</strong> '+n.foragePct.toFixed(1)+'% '+(n.foragePct>=75?'🌟':'⚠️')+'</p></div><h3 class="text-lg font-bold mt-6 mb-2">2. 💰 수익성</h3><div class="bg-slate-50 p-4 rounded-lg mb-4"><table class="w-full text-sm"><tr class="border-b"><td>목장</td><td class="text-right font-bold '+(data.ranch.profit>=0?'text-amber-600':'text-red-600')+'">'+app.fmt(data.ranch.profit)+'</td></tr><tr class="border-b"><td>공장</td><td class="text-right font-bold '+(data.factory.profit>=0?'text-blue-600':'text-red-600')+'">'+app.fmt(data.factory.profit)+'</td></tr><tr class="border-b"><td>카페</td><td class="text-right font-bold '+(data.cafe.profit>=0?'text-emerald-600':'text-red-600')+'">'+app.fmt(data.cafe.profit)+'</td></tr><tr class="bg-indigo-100"><td class="font-bold">합계</td><td class="text-right font-black text-lg '+(total>=0?'text-indigo-700':'text-red-600')+'">'+app.fmt(total)+'</td></tr></table></div><h3 class="text-lg font-bold mt-6 mb-2">3. 💡 제안</h3><div class="bg-emerald-50 p-4 rounded-lg"><ul class="space-y-2">';
+        if(n.foragePct<75)report+='<li>🌿 조사료 '+n.foragePct.toFixed(1)+'%→75%↑</li>';
+        if(n.omegaRatio>2)report+='<li>🐟 오메가 '+n.omegaRatio.toFixed(1)+':1→2:1↓</li>';
+        if(data.ranch.profit<0)report+='<li>🚨 목장적자-이체단가/사료비조정</li>';
+        if(data.cafe.profit<0)report+='<li>☕ 카페적자-판매가/고정비조정</li>';
+        if((pa.mix+pa.latteMilk+pa.milk750+pa.yogurt500)!==100)report+='<li>⚠️ 제품비율합계'+(pa.mix+pa.latteMilk+pa.milk750+pa.yogurt500)+'%≠100%</li>';
+        if(total>0&&n.foragePct>=75)report+='<li>🌟 우수-A2 Jersey Hay Milk</li>';
+        report+='</ul></div>';
+        content.innerHTML=report;
+    }
+};
+document.addEventListener('DOMContentLoaded',app.init);
+</script>
+</body>
+</html>
