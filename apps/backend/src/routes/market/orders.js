@@ -110,13 +110,14 @@ router.post('/', validate(orderSchema), async (req, res, next) => {
 /** GET / — 주문 목록 */
 router.get('/', async (req, res, next) => {
   try {
-    const { status, channel, date_from, date_to, page = 1, limit = 30 } = req.query
+    const { status, channel, customer_id, date_from, date_to, page = 1, limit = 30 } = req.query
     const conditions = ['o.deleted_at IS NULL']
     const params = []
     let idx = 1
 
     if (status) { conditions.push(`o.status = $${idx++}`); params.push(status) }
     if (channel) { conditions.push(`o.channel = $${idx++}`); params.push(channel) }
+    if (customer_id) { conditions.push(`o.customer_id = $${idx++}`); params.push(customer_id) }
     if (date_from) { conditions.push(`o.created_at >= $${idx++}`); params.push(date_from) }
     if (date_to) { conditions.push(`o.created_at < ($${idx++})::date + 1`); params.push(date_to) }
 
