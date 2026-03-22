@@ -50,7 +50,7 @@ router.get('/daily', async (req, res, next) => {
     // daily_milk_totals 테이블에서 먼저 조회
     try {
       const result = await query(`
-        SELECT date::text AS date, total_l
+        SELECT date::text AS date, total_l, COALESCE(dairy_assoc_l, 0) AS dairy_assoc_l
         FROM daily_milk_totals
         WHERE date >= CURRENT_DATE - $1
         ORDER BY date DESC
@@ -210,51 +210,108 @@ router.get('/', validate(listMilkingSchema, 'query'), async (req, res, next) => 
   }
 })
 
-/** POST /daily-total — 일일 총 착유량 수동 입력 */
+/** POST /daily-total — 일일 총 착유량 + 납유량 수동 입력 */
 router.post('/daily-total', async (req, res, next) => {
   try {
-    const { amount_l, date } = req.body
+    const { amount_l, dairy_assoc_l, date } = req.body
     if (!amount_l || amount_l <= 0) {
       return res.status(400).json(apiError('INVALID', '착유량을 입력하세요'))
     }
     const targetDate = date || new Date().toISOString().split('T')[0]
 
-    // UPSERT: 같은 날짜면 업데이트
+    // 테이블 없으면 생성 (dairy_assoc_l 컬럼 포함)
+    await query(`
+      CREATE TABLE IF NOT EXISTS daily_milk_totals (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        date DATE UNIQUE NOT NULL,
+        total_l NUMERIC(8,2) NOT NULL,
+        dairy_assoc_l NUMERIC(8,2) DEFAULT 0,
+        recorded_by UUID,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `).catch(() => {})
+
+    // dairy_assoc_l 컬럼 없으면 추가
+    await query(`ALTER TABLE daily_milk_totals ADD COLUMN IF NOT EXISTS dairy_assoc_l NUMERIC(8,2) DEFAULT 0`).catch(() => {})
+
+    // UPSERT
     const result = await query(`
-      INSERT INTO daily_milk_totals (date, total_l, recorded_by)
-      VALUES ($1, $2, $3)
-      ON CONFLICT (date) DO UPDATE SET total_l = $2, updated_at = NOW()
+      INSERT INTO daily_milk_totals (date, total_l, dairy_assoc_l, recorded_by)
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (date) DO UPDATE SET total_l = $2, dairy_assoc_l = $3, updated_at = NOW()
       RETURNING *
-    `, [targetDate, amount_l, req.user?.id])
+    `, [targetDate, amount_l, dairy_assoc_l || 0, req.user?.id])
 
     res.status(201).json(apiResponse(result.rows[0]))
   } catch (err) {
-    // 테이블 없으면 생성 후 재시도
-    if (err.code === '42P01') {
-      try {
-        await query(`
-          CREATE TABLE IF NOT EXISTS daily_milk_totals (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            date DATE UNIQUE NOT NULL,
-            total_l NUMERIC(8,2) NOT NULL,
-            recorded_by UUID,
-            created_at TIMESTAMPTZ DEFAULT NOW(),
-            updated_at TIMESTAMPTZ DEFAULT NOW()
-          )
-        `)
-        const { amount_l, date } = req.body
-        const targetDate = date || new Date().toISOString().split('T')[0]
-        const result = await query(`
-          INSERT INTO daily_milk_totals (date, total_l, recorded_by)
-          VALUES ($1, $2, $3)
-          ON CONFLICT (date) DO UPDATE SET total_l = $2, updated_at = NOW()
-          RETURNING *
-        `, [targetDate, amount_l, req.user?.id])
-        return res.status(201).json(apiResponse(result.rows[0]))
-      } catch (retryErr) {
-        return next(retryErr)
-      }
+    next(err)
+  }
+})
+
+/** GET /monthly-dairy — 이번달 납유 정산 */
+router.get('/monthly-dairy', async (req, res, next) => {
+  try {
+    const result = await query(`
+      SELECT
+        COUNT(*) AS days,
+        COALESCE(SUM(dairy_assoc_l), 0) AS total_dairy_l,
+        COALESCE(SUM(total_l), 0) AS total_milk_l,
+        COALESCE(AVG(dairy_assoc_l), 0) AS avg_daily_dairy_l
+      FROM daily_milk_totals
+      WHERE date >= DATE_TRUNC('month', CURRENT_DATE)
+        AND date <= CURRENT_DATE
+        AND dairy_assoc_l > 0
+    `)
+    res.json(apiResponse(result.rows[0]))
+  } catch (err) {
+    // 테이블 없으면 기본값
+    res.json(apiResponse({ days: 0, total_dairy_l: 0, total_milk_l: 0, avg_daily_dairy_l: 0 }))
+  }
+})
+
+/** GET /dairy-price — 납유단가 조회 */
+router.get('/dairy-price', async (req, res, next) => {
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS settings (
+        key VARCHAR(50) PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `).catch(() => {})
+
+    const result = await query(`SELECT value FROM settings WHERE key = 'dairy_unit_price'`)
+    const price = result.rows.length > 0 ? parseInt(result.rows[0].value) : 1130
+    res.json(apiResponse({ unit_price: price }))
+  } catch (err) {
+    res.json(apiResponse({ unit_price: 1130 }))
+  }
+})
+
+/** POST /dairy-price — 납유단가 설정 */
+router.post('/dairy-price', async (req, res, next) => {
+  try {
+    const { unit_price } = req.body
+    if (!unit_price || unit_price <= 0) {
+      return res.status(400).json(apiError('INVALID', '단가를 입력하세요'))
     }
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS settings (
+        key VARCHAR(50) PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `).catch(() => {})
+
+    await query(`
+      INSERT INTO settings (key, value) VALUES ('dairy_unit_price', $1)
+      ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = NOW()
+    `, [String(unit_price)])
+
+    res.json(apiResponse({ unit_price }))
+  } catch (err) {
     next(err)
   }
 })
