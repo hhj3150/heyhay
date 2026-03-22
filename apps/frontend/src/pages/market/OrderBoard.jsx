@@ -7,11 +7,11 @@ import { useState, useEffect, useCallback } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { apiGet, apiPut } from '@/lib/api'
+import { apiGet, apiPut, apiPost } from '@/lib/api'
 import {
   Package, Truck, CheckCircle2, Clock, CreditCard,
   PackageCheck, Search, RefreshCw, AlertCircle, Phone, MapPin,
-  ChevronRight, Snowflake,
+  ChevronRight, Snowflake, Plus, X, Trash2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -28,6 +28,22 @@ const CHANNEL_BADGE = {
   SMARTSTORE: { label: '스마트스토어', color: 'bg-green-100 text-green-700' },
   OWN_MALL: { label: '자사몰', color: 'bg-blue-100 text-blue-700' },
   B2B: { label: 'B2B', color: 'bg-slate-100 text-slate-700' },
+  PHONE: { label: '전화주문', color: 'bg-orange-100 text-orange-700' },
+  KAKAO: { label: '카톡주문', color: 'bg-yellow-100 text-yellow-700' },
+  VISIT: { label: '방문주문', color: 'bg-pink-100 text-pink-700' },
+  OFFLINE: { label: '오프라인', color: 'bg-purple-100 text-purple-700' },
+}
+
+const EMPTY_OFFLINE_ORDER = {
+  channel: 'PHONE',
+  recipient_name: '',
+  recipient_phone: '',
+  shipping_zip: '',
+  shipping_address: '',
+  shipping_memo: '',
+  items: [{ sku_id: '', quantity: 1, unit_price: 0 }],
+  payment_method: '계좌이체',
+  paid: false,
 }
 
 export default function OrderBoard() {
@@ -37,6 +53,9 @@ export default function OrderBoard() {
   const [loading, setLoading] = useState(false)
   const [shipModal, setShipModal] = useState(null)
   const [shipForm, setShipForm] = useState({ courier: 'CJ대한통운', tracking_number: '' })
+  const [newOrderModal, setNewOrderModal] = useState(false)
+  const [newOrder, setNewOrder] = useState({ ...EMPTY_OFFLINE_ORDER })
+  const [skuList, setSkuList] = useState([])
 
   const fetchOrders = useCallback(async () => {
     setLoading(true)
@@ -59,10 +78,68 @@ export default function OrderBoard() {
     const statsRes = await apiGet('/market/orders/stats')
     if (statsRes.success) setStats(statsRes.data)
 
+    // SKU 목록 조회
+    const skuRes = await apiGet('/factory/skus')
+    if (skuRes.success) setSkuList(skuRes.data)
+
     setLoading(false)
   }, [])
 
   useEffect(() => { fetchOrders() }, [fetchOrders])
+
+  // 오프라인 주문 등록
+  const submitOfflineOrder = async () => {
+    const o = newOrder
+    if (!o.recipient_name || !o.recipient_phone) return
+
+    const validItems = o.items.filter((i) => i.sku_id && i.quantity > 0)
+    if (validItems.length === 0) return
+
+    const res = await apiPost('/market/orders', {
+      channel: o.channel,
+      items: validItems.map((i) => ({
+        sku_id: i.sku_id,
+        quantity: parseInt(i.quantity),
+        unit_price: parseInt(i.unit_price),
+      })),
+      recipient_name: o.recipient_name,
+      recipient_phone: o.recipient_phone,
+      shipping_zip: o.shipping_zip,
+      shipping_address: o.shipping_address,
+      shipping_memo: o.shipping_memo,
+    })
+
+    if (res.success) {
+      // 결제 완료 체크됐으면 바로 PAID로 변경
+      if (o.paid && res.data?.id) {
+        await apiPut(`/market/orders/${res.data.id}`, { status: 'PAID' })
+      }
+      setNewOrderModal(false)
+      setNewOrder({ ...EMPTY_OFFLINE_ORDER })
+      fetchOrders()
+    }
+  }
+
+  const updateNewOrderItem = (idx, key, value) => {
+    setNewOrder((prev) => ({
+      ...prev,
+      items: prev.items.map((item, i) => i === idx ? { ...item, [key]: value } : item),
+    }))
+  }
+
+  const addNewOrderItem = () => {
+    setNewOrder((prev) => ({
+      ...prev,
+      items: [...prev.items, { sku_id: '', quantity: 1, unit_price: 0 }],
+    }))
+  }
+
+  const removeNewOrderItem = (idx) => {
+    setNewOrder((prev) => ({
+      ...prev,
+      items: prev.items.filter((_, i) => i !== idx),
+    }))
+  }
 
   const moveOrder = async (orderId, nextStatus, extra = {}) => {
     const payload = { status: nextStatus, ...extra }
@@ -122,6 +199,9 @@ export default function OrderBoard() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+          <Button onClick={() => setNewOrderModal(true)} className="bg-emerald-500 hover:bg-emerald-600 shrink-0">
+            <Plus className="w-4 h-4" /> 주문등록
+          </Button>
           <Button variant="outline" onClick={fetchOrders} disabled={loading}>
             <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
           </Button>
@@ -256,6 +336,138 @@ export default function OrderBoard() {
           )
         })}
       </div>
+
+      {/* 오프라인 주문 등록 모달 */}
+      {newOrderModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto mx-4">
+            <div className="flex items-center justify-between p-5 border-b">
+              <h3 className="text-lg font-bold">주문 등록</h3>
+              <button onClick={() => { setNewOrderModal(false); setNewOrder({ ...EMPTY_OFFLINE_ORDER }) }}>
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              {/* 주문 채널 */}
+              <div>
+                <label className="text-xs font-semibold text-slate-600 mb-1.5 block">주문 경로</label>
+                <div className="flex gap-2 flex-wrap">
+                  {[
+                    { value: 'PHONE', label: '📞 전화', color: 'bg-orange-100 text-orange-700 border-orange-300' },
+                    { value: 'KAKAO', label: '💬 카톡', color: 'bg-yellow-100 text-yellow-700 border-yellow-300' },
+                    { value: 'VISIT', label: '🏠 방문', color: 'bg-pink-100 text-pink-700 border-pink-300' },
+                    { value: 'B2B', label: '🏢 B2B', color: 'bg-slate-100 text-slate-700 border-slate-300' },
+                    { value: 'OWN_MALL', label: '🌐 자사몰', color: 'bg-blue-100 text-blue-700 border-blue-300' },
+                  ].map((ch) => (
+                    <button key={ch.value}
+                      onClick={() => setNewOrder((o) => ({ ...o, channel: ch.value }))}
+                      className={cn('px-3 py-1.5 rounded-lg text-xs font-medium border transition-all',
+                        newOrder.channel === ch.value ? `${ch.color} ring-2 ring-offset-1` : 'bg-white text-slate-400 border-slate-200')}>
+                      {ch.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 고객 정보 */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-slate-600">받는분 *</label>
+                  <Input placeholder="이름" value={newOrder.recipient_name}
+                    onChange={(e) => setNewOrder((o) => ({ ...o, recipient_name: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-600">연락처 *</label>
+                  <Input placeholder="010-0000-0000" value={newOrder.recipient_phone}
+                    onChange={(e) => setNewOrder((o) => ({ ...o, recipient_phone: e.target.value }))} />
+                </div>
+              </div>
+
+              {/* 배송 주소 */}
+              <div>
+                <label className="text-xs font-semibold text-slate-600">배송 주소</label>
+                <Input placeholder="주소 입력" value={newOrder.shipping_address}
+                  onChange={(e) => setNewOrder((o) => ({ ...o, shipping_address: e.target.value }))} />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600">배송 메모</label>
+                <Input placeholder="부재시 경비실 / 벨 누르지 마세요 등" value={newOrder.shipping_memo}
+                  onChange={(e) => setNewOrder((o) => ({ ...o, shipping_memo: e.target.value }))} />
+              </div>
+
+              {/* 주문 상품 */}
+              <div>
+                <label className="text-xs font-semibold text-slate-600 mb-1.5 block">주문 상품 *</label>
+                <div className="space-y-2">
+                  {newOrder.items.map((item, idx) => (
+                    <div key={idx} className="flex gap-2 items-end bg-slate-50 p-2.5 rounded-lg">
+                      <div className="flex-1">
+                        <select className="w-full h-9 px-2 border rounded text-sm" value={item.sku_id}
+                          onChange={(e) => {
+                            const sku = skuList.find((s) => s.id === e.target.value)
+                            updateNewOrderItem(idx, 'sku_id', e.target.value)
+                            if (sku) updateNewOrderItem(idx, 'unit_price', sku.default_price || 0)
+                          }}>
+                          <option value="">제품 선택</option>
+                          {skuList.map((s) => (
+                            <option key={s.id} value={s.id}>{s.code} — {s.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="w-20">
+                        <Input type="number" min="1" className="h-9 text-center" placeholder="수량"
+                          value={item.quantity}
+                          onChange={(e) => updateNewOrderItem(idx, 'quantity', e.target.value)} />
+                      </div>
+                      <div className="w-24">
+                        <Input type="number" className="h-9 text-right" placeholder="단가"
+                          value={item.unit_price}
+                          onChange={(e) => updateNewOrderItem(idx, 'unit_price', e.target.value)} />
+                      </div>
+                      {newOrder.items.length > 1 && (
+                        <button onClick={() => removeNewOrderItem(idx)} className="p-1 hover:bg-red-50 rounded">
+                          <Trash2 className="w-4 h-4 text-red-400" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <Button variant="outline" size="sm" onClick={addNewOrderItem} className="w-full">
+                    <Plus className="w-3 h-3" /> 상품 추가
+                  </Button>
+                </div>
+              </div>
+
+              {/* 합계 */}
+              <div className="bg-slate-50 p-3 rounded-lg">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500">상품 합계</span>
+                  <span className="font-bold text-lg">
+                    {newOrder.items.reduce((sum, i) => sum + (parseInt(i.quantity) || 0) * (parseInt(i.unit_price) || 0), 0).toLocaleString()}원
+                  </span>
+                </div>
+              </div>
+
+              {/* 결제 확인 */}
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" className="w-4 h-4 rounded" checked={newOrder.paid}
+                  onChange={(e) => setNewOrder((o) => ({ ...o, paid: e.target.checked }))} />
+                <span className="text-sm font-medium text-slate-700">결제 완료됨 (계좌이체/현금 등)</span>
+              </label>
+
+              {/* 버튼 */}
+              <div className="flex gap-2 pt-2">
+                <Button onClick={submitOfflineOrder} className="flex-1 bg-emerald-500 hover:bg-emerald-600">
+                  주문 등록
+                </Button>
+                <Button variant="outline" onClick={() => { setNewOrderModal(false); setNewOrder({ ...EMPTY_OFFLINE_ORDER }) }}>
+                  취소
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 발송 처리 모달 */}
       {shipModal && (
