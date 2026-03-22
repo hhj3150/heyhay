@@ -1,13 +1,13 @@
-/**
- * @fileoverview 공장 관리 모듈 라우트
- */
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import FactoryDashboard from './FactoryDashboard'
+import ProductionPlan from './ProductionPlan'
 
 export default function FactoryRoutes() {
   return (
     <Routes>
-      <Route index element={<FactoryDashboard />} />
+      <Route index element={<Navigate to="plan" replace />} />
+      <Route path="dashboard" element={<FactoryDashboard />} />
+      <Route path="plan" element={<ProductionPlan />} />
     </Routes>
   )
 }

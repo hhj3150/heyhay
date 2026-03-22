@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Milk, Factory, ShoppingCart, Coffee,
   LogOut, ChevronLeft, ChevronRight, Baby, Heart, Wheat,
   Package, CreditCard, BarChart3, Users, Calendar, Menu, X,
-  Monitor, DollarSign,
+  Monitor, DollarSign, ClipboardList, Gauge,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import useAuthStore from '@/stores/authStore'
@@ -28,7 +28,10 @@ const NAV_ITEMS = [
     { label: '착유 관리', icon: Milk, path: '/farm/milking' },
     { label: '번식 관리', icon: Baby, path: '/farm/breeding' },
   ]},
-  { id: 'factory', label: '공장 관리', icon: Factory, path: '/factory', color: 'text-blue-500' },
+  { id: 'factory', label: '공장 관리', icon: Factory, path: '/factory', color: 'text-blue-500', children: [
+    { label: '생산 계획', icon: ClipboardList, path: '/factory/plan' },
+    { label: '공정 현황', icon: Gauge, path: '/factory/dashboard' },
+  ]},
   { id: 'market', label: '온라인 마켓', icon: ShoppingCart, path: '/market', color: 'text-emerald-500', children: [
     { label: '주문 관리', icon: Package, path: '/market/orders' },
     { label: '구독 관리', icon: CreditCard, path: '/market/subscriptions' },
