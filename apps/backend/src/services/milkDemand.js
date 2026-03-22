@@ -179,23 +179,35 @@ const menuToSku = (menuName) => {
  * @returns {Promise<Array>} 거래처별 SKU 수량
  */
 const getB2BDemand = async () => {
-  const result = await query(`
-    SELECT c.name AS customer_name, s.code AS sku_code, s.name AS sku_name,
-           SUM(oi.quantity) AS total_qty,
-           COUNT(DISTINCT o.id) AS order_count
-    FROM order_items oi
-    JOIN orders o ON oi.order_id = o.id
-    JOIN skus s ON oi.sku_id = s.id
-    JOIN customers c ON o.customer_id = c.id
-    WHERE o.channel = 'B2B'
-      AND o.status NOT IN ('CANCELLED', 'RETURNED')
-      AND o.created_at >= DATE_TRUNC('month', NOW())
-      AND o.deleted_at IS NULL
-    GROUP BY c.name, s.code, s.name
-    ORDER BY c.name
-  `)
+  try {
+    // b2b_standing_orders 테이블에서 정기주문 기반 수요 계산
+    const result = await query(`
+      SELECT p.name AS partner_name, s.code AS sku_code, s.name AS sku_name,
+             bso.quantity, bso.frequency, bso.unit_price
+      FROM b2b_standing_orders bso
+      JOIN b2b_partners p ON bso.partner_id = p.id
+      JOIN skus s ON bso.sku_id = s.id
+      WHERE bso.is_active = true AND p.is_active = true AND p.deleted_at IS NULL
+      ORDER BY p.name, s.code
+    `)
 
-  return result.rows
+    // 주간 환산
+    const freqMultiplier = { DAILY: 7, WEEKLY: 1, BIWEEKLY: 0.5, MONTHLY: 0.25 }
+    const weeklyBySku = {}
+    const byPartner = []
+
+    result.rows.forEach((r) => {
+      const weekly = Math.ceil(r.quantity * (freqMultiplier[r.frequency] || 1))
+      if (!weeklyBySku[r.sku_code]) weeklyBySku[r.sku_code] = 0
+      weeklyBySku[r.sku_code] += weekly
+      byPartner.push({ ...r, weekly_qty: weekly })
+    })
+
+    return { weekly_by_sku: weeklyBySku, by_partner: byPartner }
+  } catch {
+    // b2b_partners 테이블 미생성 시 fallback
+    return { weekly_by_sku: {}, by_partner: [] }
+  }
 }
 
 /**
@@ -267,6 +279,10 @@ const generateProductionPlan = async () => {
   addDemand('미처리주문', pendingDemand)
   addDemand('카페(주간)', cafeWeekly)
 
+  // B2B 정기주문 주간 환산 수요 합산
+  const b2bWeekly = b2bDemand.weekly_by_sku || {}
+  addDemand('B2B', b2bWeekly)
+
   // 원유 필요량 계산
   const skuTotals = {}
   for (const [sku, data] of Object.entries(totalSkuDemand)) {
@@ -291,7 +307,7 @@ const generateProductionPlan = async () => {
       subscriptions: thisWeekSubs,
       pending_orders: pendingDemand,
       cafe_weekly: cafeWeekly,
-      b2b_monthly: b2bDemand,
+      b2b: b2bDemand,
     },
 
     // SKU별 통합 수요

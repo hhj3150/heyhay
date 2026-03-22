@@ -56,10 +56,11 @@ export default function ProductionPlan() {
   }))
 
   // 채널별 수요 요약
+  const b2bWeeklyTotal = Object.values(demand_by_channel.b2b?.weekly_by_sku || {}).reduce((s, v) => s + v, 0)
   const channelSummary = [
     { label: '정기구독', count: Object.values(demand_by_channel.subscriptions || {}).reduce((s, v) => s + v, 0), color: 'text-violet-600', bg: 'bg-violet-50' },
     { label: '주문(미처리)', count: Object.values(demand_by_channel.pending_orders || {}).reduce((s, v) => s + (v.quantity || 0), 0), color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: '카페(주간)', count: Object.values(demand_by_channel.cafe_weekly || {}).reduce((s, v) => s + v, 0), color: 'text-amber-600', bg: 'bg-amber-50' },
+    { label: 'B2B(주간)', count: b2bWeeklyTotal, color: 'text-indigo-600', bg: 'bg-indigo-50' },
   ]
 
   return (
@@ -214,23 +215,28 @@ export default function ProductionPlan() {
       )}
 
       {/* B2B 거래처 */}
-      {demand_by_channel.b2b_monthly?.length > 0 && (
+      {demand_by_channel.b2b?.by_partner?.length > 0 && (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm sm:text-base flex items-center gap-2">
               <Truck className="w-4 h-4 text-slate-500" />
-              B2B 거래처 (이번달)
+              B2B 거래처 정기주문 (주간)
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {demand_by_channel.b2b_monthly.map((b, i) => (
+              {demand_by_channel.b2b.by_partner.map((b, i) => (
                 <div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
                   <div>
-                    <p className="text-sm font-bold">{b.customer_name}</p>
-                    <p className="text-[10px] text-slate-400">{b.sku_name} · {b.order_count}건</p>
+                    <p className="text-sm font-bold">{b.partner_name}</p>
+                    <p className="text-[10px] text-slate-400">
+                      {b.sku_name} · {b.frequency === 'DAILY' ? '매일' : b.frequency === 'WEEKLY' ? '주1회' : b.frequency}
+                    </p>
                   </div>
-                  <span className="text-lg font-black">{b.total_qty}<span className="text-xs text-slate-400 ml-0.5">개</span></span>
+                  <div className="text-right">
+                    <span className="text-lg font-black">{b.weekly_qty}<span className="text-xs text-slate-400 ml-0.5">개/주</span></span>
+                    <p className="text-[10px] text-slate-400">({b.quantity}개/{b.frequency === 'DAILY' ? '일' : '회'})</p>
+                  </div>
                 </div>
               ))}
             </div>

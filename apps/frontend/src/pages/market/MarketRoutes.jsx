@@ -4,6 +4,7 @@ import OrderBoard from './OrderBoard'
 import SubscriptionDashboard from './SubscriptionDashboard'
 import CustomerCRM from './CustomerCRM'
 import DeliverySchedule from './DeliverySchedule'
+import B2BPartners from './B2BPartners'
 
 export default function MarketRoutes() {
   return (
@@ -14,6 +15,7 @@ export default function MarketRoutes() {
       <Route path="subscriptions" element={<SubscriptionDashboard />} />
       <Route path="customers" element={<CustomerCRM />} />
       <Route path="delivery" element={<DeliverySchedule />} />
+      <Route path="b2b" element={<B2BPartners />} />
     </Routes>
   )
 }

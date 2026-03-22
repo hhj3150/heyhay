@@ -7,6 +7,7 @@ const router = express.Router()
 router.use('/customers', require('./customers'))
 router.use('/subscriptions', require('./subscriptions'))
 router.use('/orders', require('./orders'))
+router.use('/b2b', require('./b2bPartners'))
 router.use('/naver', require('./naverSync'))
 
 module.exports = router

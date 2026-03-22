@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Milk, Factory, ShoppingCart, Coffee,
   LogOut, ChevronLeft, ChevronRight, Baby, Heart, Wheat,
   Package, CreditCard, BarChart3, Users, Calendar, Menu, X,
-  Monitor, DollarSign, ClipboardList, Gauge,
+  Monitor, DollarSign, ClipboardList, Gauge, Building2,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import useAuthStore from '@/stores/authStore'
@@ -35,6 +35,7 @@ const NAV_ITEMS = [
   { id: 'market', label: '온라인 마켓', icon: ShoppingCart, path: '/market', color: 'text-emerald-500', children: [
     { label: '주문 관리', icon: Package, path: '/market/orders' },
     { label: '구독 관리', icon: CreditCard, path: '/market/subscriptions' },
+    { label: 'B2B 거래처', icon: Building2, path: '/market/b2b' },
     { label: '고객 관리', icon: Users, path: '/market/customers' },
     { label: '배송 스케줄', icon: Calendar, path: '/market/delivery' },
     { label: '현황 요약', icon: BarChart3, path: '/market/overview' },
