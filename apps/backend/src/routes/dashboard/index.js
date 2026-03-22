@@ -161,4 +161,7 @@ router.post('/ai-report', async (req, res, next) => {
   }
 })
 
+// AI 음성 대화
+router.use('/', require('./aiChat'))
+
 module.exports = router
