@@ -31,8 +31,10 @@ export default function DailyMilkPage() {
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
 
-  // 납유 단가 (원/L) — 2곳 각각
+  // 납유 단가 (원/L) — 진흥회: 180L까지 정상가, 초과분 -100원
   const [dairyPrice, setDairyPrice] = useState(1130)
+  const [dairyOverPrice, setDairyOverPrice] = useState(100) // 초과분 차감 단가
+  const DAIRY_QUOTA = 180 // 진흥회 정상유대 기준량
   const [d2oPrice, setD2oPrice] = useState(1200)
   const [showPriceSetting, setShowPriceSetting] = useState(false)
   const [dairyPriceInput, setDairyPriceInput] = useState('')
@@ -105,6 +107,18 @@ export default function DailyMilkPage() {
     }
   }
 
+  /**
+   * 진흥회 납유대금 계산 (차등 단가)
+   * 180L까지: 정상 단가 (예: 1,130원/L)
+   * 180L 초과분: 정상 단가 - 100원 (예: 1,030원/L)
+   */
+  const calcDairyPayment = (liters) => {
+    if (liters <= 0) return 0
+    const normalL = Math.min(liters, DAIRY_QUOTA)
+    const overL = Math.max(0, liters - DAIRY_QUOTA)
+    return Math.round(normalL * dairyPrice + overL * (dairyPrice - dairyOverPrice))
+  }
+
   // 계산
   const totalMilk = todaySaved || 0
   const loss = totalMilk * LOSS_RATE
@@ -123,7 +137,10 @@ export default function DailyMilkPage() {
   const mDairyTotal = parseFloat(monthlyStats?.total_dairy_l || 0)
   const mD2oDays = parseInt(monthlyStats?.d2o_days || 0)
   const mD2oTotal = parseFloat(monthlyStats?.total_d2o_l || 0)
-  const mDairyPayment = Math.round(mDairyTotal * dairyPrice)
+  // 진흥회: 일별 180L 기준 차등 → 월 합계는 일수 × 기준량으로 근사
+  const mDairyNormalL = Math.min(mDairyTotal, DAIRY_QUOTA * mDairyDays)
+  const mDairyOverL = Math.max(0, mDairyTotal - mDairyNormalL)
+  const mDairyPayment = Math.round(mDairyNormalL * dairyPrice + mDairyOverL * (dairyPrice - dairyOverPrice))
   const mD2oPayment = Math.round(mD2oTotal * d2oPrice)
 
   const now = new Date()
@@ -263,7 +280,7 @@ export default function DailyMilkPage() {
               <div className="flex-1 p-3 bg-green-50 rounded-xl border border-green-200">
                 <p className="text-[10px] text-slate-500">🏛️ 진흥회</p>
                 <p className="text-lg font-bold text-green-600">{dairyDelivery.toFixed(0)}L</p>
-                <p className="text-[9px] text-green-500">{Math.round(dairyDelivery * dairyPrice).toLocaleString()}원</p>
+                <p className="text-[9px] text-green-500">{calcDairyPayment(dairyDelivery).toLocaleString()}원</p>
               </div>
               <div className="text-slate-300 text-lg shrink-0">+</div>
               <div className="flex-1 p-3 bg-blue-50 rounded-xl border border-blue-200">
@@ -319,22 +336,30 @@ export default function DailyMilkPage() {
           {/* 진흥회 정산 */}
           <div className="mb-4">
             <h4 className="text-sm font-semibold text-green-700 mb-2">🏛️ 낙농진흥회</h4>
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               <div className="text-center p-3 bg-green-50 rounded-lg">
-                <p className="text-[10px] text-slate-500">단가</p>
+                <p className="text-[10px] text-slate-500">정상유대 (≤{DAIRY_QUOTA}L/일)</p>
                 <p className="text-sm font-bold text-green-700">{dairyPrice.toLocaleString()}원/L</p>
               </div>
-              <div className="text-center p-3 bg-green-50 rounded-lg">
-                <p className="text-[10px] text-slate-500">납유일수</p>
-                <p className="text-sm font-bold text-green-700">{mDairyDays}일</p>
+              <div className="text-center p-3 bg-amber-50 rounded-lg">
+                <p className="text-[10px] text-slate-500">초과분 (＞{DAIRY_QUOTA}L)</p>
+                <p className="text-sm font-bold text-amber-700">{(dairyPrice - dairyOverPrice).toLocaleString()}원/L</p>
               </div>
               <div className="text-center p-3 bg-green-50 rounded-lg">
-                <p className="text-[10px] text-slate-500">총 납유량</p>
+                <p className="text-[10px] text-slate-500">{mDairyDays}일 총 납유량</p>
                 <p className="text-sm font-bold text-green-700">{mDairyTotal.toFixed(1)}L</p>
+                {mDairyOverL > 0 && (
+                  <p className="text-[9px] text-amber-600">정상 {mDairyNormalL.toFixed(0)}L + 초과 {mDairyOverL.toFixed(0)}L</p>
+                )}
               </div>
-              <div className="text-center p-3 bg-green-100 rounded-lg border border-green-300">
+              <div className="text-center p-3 bg-green-100 rounded-lg border border-green-300 col-span-2 md:col-span-2">
                 <p className="text-[10px] text-green-600 font-semibold">납유대금</p>
-                <p className="text-lg font-black text-green-800">{mDairyPayment.toLocaleString()}원</p>
+                <p className="text-xl font-black text-green-800">{mDairyPayment.toLocaleString()}원</p>
+                {mDairyOverL > 0 && (
+                  <p className="text-[9px] text-slate-500">
+                    정상 {Math.round(mDairyNormalL * dairyPrice).toLocaleString()} + 초과 {Math.round(mDairyOverL * (dairyPrice - dairyOverPrice)).toLocaleString()}
+                  </p>
+                )}
               </div>
             </div>
           </div>
