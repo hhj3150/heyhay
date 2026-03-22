@@ -11,5 +11,6 @@ router.use('/milking', require('./milking'))
 router.use('/breeding', require('./breeding'))
 router.use('/health', require('./health'))
 router.use('/feed', require('./feed'))
+router.use('/sensor', require('./sensor'))
 
 module.exports = router

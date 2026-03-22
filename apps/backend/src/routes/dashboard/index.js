@@ -150,4 +150,15 @@ router.put('/alerts/:id', async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
+/** POST /ai-report — Claude AI 일일 분석 보고서 */
+router.post('/ai-report', async (req, res, next) => {
+  try {
+    const { generateDailyReport } = require('../../services/aiAnalysis')
+    const report = await generateDailyReport()
+    res.json(apiResponse(report))
+  } catch (err) {
+    next(err)
+  }
+})
+
 module.exports = router

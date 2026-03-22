@@ -8,6 +8,7 @@ import {
   LayoutDashboard, Milk, Factory, ShoppingCart, Coffee,
   LogOut, ChevronLeft, ChevronRight, Baby, Heart, Wheat,
   Package, CreditCard, BarChart3, Users, Calendar, Menu, X,
+  Monitor, DollarSign,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import useAuthStore from '@/stores/authStore'
@@ -35,7 +36,10 @@ const NAV_ITEMS = [
     { label: '배송 스케줄', icon: Calendar, path: '/market/delivery' },
     { label: '현황 요약', icon: BarChart3, path: '/market/overview' },
   ]},
-  { id: 'cafe', label: '밀크카페', icon: Coffee, path: '/cafe', color: 'text-violet-500' },
+  { id: 'cafe', label: '밀크카페', icon: Coffee, path: '/cafe', color: 'text-violet-500', children: [
+    { label: 'POS 판매', icon: Monitor, path: '/cafe/pos' },
+    { label: '매출·정산', icon: DollarSign, path: '/cafe/dashboard' },
+  ]},
 ]
 
 export default function Sidebar() {
