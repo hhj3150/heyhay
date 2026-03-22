@@ -473,26 +473,56 @@ export default function OrderBoard() {
       {shipModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 p-5">
-            <h3 className="text-lg font-bold mb-4">발송 처리</h3>
+            <h3 className="text-lg font-bold mb-4">배송 방법</h3>
             <div className="space-y-3">
-              <div>
-                <label className="text-xs font-medium text-slate-600">택배사</label>
-                <select className="w-full h-10 px-3 border rounded-md text-sm" value={shipForm.courier}
-                  onChange={(e) => setShipForm((f) => ({ ...f, courier: e.target.value }))}>
-                  <option value="CJ대한통운">CJ대한통운</option>
-                  <option value="롯데택배">롯데택배</option>
-                  <option value="한진택배">한진택배</option>
-                  <option value="우체국">우체국</option>
-                  <option value="로젠택배">로젠택배</option>
-                </select>
+              {/* 배송 방법 선택 */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShipForm((f) => ({ ...f, courier: '직접배달', tracking_number: '직접배달' }))}
+                  className={cn('flex-1 p-3 rounded-lg border-2 text-center transition-all',
+                    shipForm.courier === '직접배달'
+                      ? 'border-emerald-400 bg-emerald-50 text-emerald-700'
+                      : 'border-slate-200 hover:bg-slate-50')}>
+                  <span className="text-lg">🚗</span>
+                  <p className="text-xs font-medium mt-1">직접 배달</p>
+                </button>
+                <button
+                  onClick={() => setShipForm((f) => ({ ...f, courier: 'CJ대한통운', tracking_number: '' }))}
+                  className={cn('flex-1 p-3 rounded-lg border-2 text-center transition-all',
+                    shipForm.courier !== '직접배달'
+                      ? 'border-blue-400 bg-blue-50 text-blue-700'
+                      : 'border-slate-200 hover:bg-slate-50')}>
+                  <span className="text-lg">📦</span>
+                  <p className="text-xs font-medium mt-1">택배 발송</p>
+                </button>
               </div>
-              <div>
-                <label className="text-xs font-medium text-slate-600">운송장 번호</label>
-                <Input value={shipForm.tracking_number} placeholder="운송장 번호 입력"
-                  onChange={(e) => setShipForm((f) => ({ ...f, tracking_number: e.target.value }))} />
-              </div>
+
+              {/* 택배 선택 시에만 표시 */}
+              {shipForm.courier !== '직접배달' && (
+                <>
+                  <div>
+                    <label className="text-xs font-medium text-slate-600">택배사</label>
+                    <select className="w-full h-10 px-3 border rounded-md text-sm" value={shipForm.courier}
+                      onChange={(e) => setShipForm((f) => ({ ...f, courier: e.target.value }))}>
+                      <option value="CJ대한통운">CJ대한통운</option>
+                      <option value="롯데택배">롯데택배</option>
+                      <option value="한진택배">한진택배</option>
+                      <option value="우체국">우체국</option>
+                      <option value="로젠택배">로젠택배</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-600">운송장 번호</label>
+                    <Input value={shipForm.tracking_number} placeholder="운송장 번호 입력"
+                      onChange={(e) => setShipForm((f) => ({ ...f, tracking_number: e.target.value }))} />
+                  </div>
+                </>
+              )}
+
               <div className="flex gap-2 pt-2">
-                <Button onClick={handleShip} className="flex-1">발송 완료</Button>
+                <Button onClick={handleShip} className="flex-1">
+                  {shipForm.courier === '직접배달' ? '🚗 직접 배달 완료' : '📦 발송 완료'}
+                </Button>
                 <Button variant="outline" onClick={() => setShipModal(null)}>취소</Button>
               </div>
             </div>
