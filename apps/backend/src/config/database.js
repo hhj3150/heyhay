@@ -5,7 +5,7 @@
 const { Pool } = require('pg')
 const env = require('./env')
 
-const pool = new Pool({
+const poolConfig = {
   host: env.db.host,
   port: env.db.port,
   database: env.db.name,
@@ -14,7 +14,14 @@ const pool = new Pool({
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
-})
+}
+
+// Railway 등 클라우드 DB는 SSL 필요
+if (env.db.ssl) {
+  poolConfig.ssl = env.db.ssl
+}
+
+const pool = new Pool(poolConfig)
 
 pool.on('error', (err) => {
   console.error('PostgreSQL 연결 풀 에러:', err)

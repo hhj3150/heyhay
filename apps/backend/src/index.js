@@ -14,7 +14,24 @@ const app = express()
 // --- 글로벌 미들웨어 ---
 app.use(helmet())
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    // 허용 목록: 로컬 + Netlify + 커스텀 도메인
+    const allowed = [
+      'http://localhost:5173',
+      'http://localhost:3000',
+      process.env.CORS_ORIGIN,
+    ].filter(Boolean)
+
+    // Netlify 배포 주소, 커스텀 도메인 허용
+    if (!origin || allowed.includes(origin) ||
+        origin.endsWith('.netlify.app') ||
+        origin.endsWith('송영신목장.com') ||
+        origin.includes('xn--')) {
+      callback(null, true)
+    } else {
+      callback(null, true) // 개발 편의상 전체 허용 (프로덕션에서 제한)
+    }
+  },
   credentials: true,
 }))
 app.use(express.json({ limit: '10mb' }))

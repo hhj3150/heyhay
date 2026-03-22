@@ -3,6 +3,8 @@
  * JWT 자동 첨부 + 토큰 갱신 + 에러 처리
  */
 
+// 개발: Vite proxy로 /api → localhost:3001
+// 배포: Netlify redirects로 /api → Railway 백엔드
 const BASE_URL = '/api/v1'
 
 /**
