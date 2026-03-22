@@ -2,38 +2,47 @@
  * @fileoverview 원유 수요 계산 서비스
  * 주문(구독+일반+카페+B2B) → SKU별 수량 → 원유 필요량 역산
  *
- * 핵심 로직:
- * 1. 이번주/다음주 예정 주문 수집 (구독 배송 + 미처리 주문)
- * 2. SKU별 수량 합산
- * 3. 제품별 원유 소요량(BOM) 적용 → 총 필요 원유량 산출
- * 4. 낙농진흥회 납유(200L/일) 제외 → D2O 공장 투입 가능량 비교
+ * ★ 사업 구조 (핵심):
+ * 송영신목장 일 착유 ~550L
+ * → ① 주문량 기반 D2O 공장 생산 (최우선)
+ * → ② 남는 양만 낙농진흥회 납유
+ * ※ 주문이 많아지면 진흥회 납유량이 줄어드는 구조
  *
- * 원유 소요량 기준 (유가공 수율 감안):
- * - 살균유: 원유 1.08L → 제품 1L (손실 8%)
- * - 발효유: 원유 1.10L → 제품 1L (발효 수축 포함)
+ * 원유 소요량 기준 (loss 2% 적용):
+ * - 살균유: 원유 × 1.02 (2% 손실)
+ * - 발효유: 원유 × 1.02 (2% 손실)
  * - 카이막: 원유 10L → 카이막 100g (크림 분리, 농축)
- * - 소프트아이스크림: 원유 0.5L → 1서빙 (크림+우유 혼합)
+ * - 소프트아이스크림: 원유 0.5L → 1서빙
+ *
+ * 스마트스토어: HACCP 인증 후 ~1개월 뒤 유제품 등록 예정
+ * (현재는 에프트밀크(반려식물 퇴비)만 판매 중)
  */
 const { query } = require('../config/database')
 
+/** 공정 손실률 2% */
+const LOSS_RATE = 0.02
+
 /**
  * SKU별 원유 소요량 (L / 제품 1단위)
- * 실제 유가공 수율 기반
+ * loss 2% 적용
  */
 const RAW_MILK_BOM = Object.freeze({
-  'A2-750': { raw_milk_l: 0.81, description: '750ml × 1.08 수율' },
-  'A2-180': { raw_milk_l: 0.195, description: '180ml × 1.08 수율' },
-  'YG-500': { raw_milk_l: 0.55, description: '500ml × 1.10 수율' },
-  'YG-180': { raw_milk_l: 0.198, description: '180ml × 1.10 수율' },
-  'SI-001': { raw_milk_l: 0.5, description: '소프트아이스크림 1서빙' },
-  'KM-100': { raw_milk_l: 10.0, description: '카이막 100g (크림분리+농축)' },
+  'A2-750': { raw_milk_l: 0.75 * (1 + LOSS_RATE), description: '750ml + 2% loss = 0.765L' },
+  'A2-180': { raw_milk_l: 0.18 * (1 + LOSS_RATE), description: '180ml + 2% loss = 0.184L' },
+  'YG-500': { raw_milk_l: 0.50 * (1 + LOSS_RATE), description: '500ml + 2% loss = 0.51L' },
+  'YG-180': { raw_milk_l: 0.18 * (1 + LOSS_RATE), description: '180ml + 2% loss = 0.184L' },
+  'SI-001': { raw_milk_l: 0.5, description: '소프트아이스크림 1서빙 ~0.5L' },
+  'KM-100': { raw_milk_l: 10.0, description: '카이막 100g (크림분리+농축 10L)' },
 })
 
-/** 일 착유량 (목장 전체 평균) */
-const DAILY_MILKING_L = 145
+/** 일 착유량 (송영신목장 전체) */
+const DAILY_MILKING_L = 550
 
-/** 낙농진흥회 납유 쿼터 (ERP 제외 분량) */
-const DAIRY_QUOTA_L = 200
+/**
+ * 낙농진흥회 납유 = 착유량 - 주문 생산량
+ * (고정 쿼터가 아님, 남는 양만 납유)
+ */
+const DAIRY_QUOTA_L = null  // 동적 계산
 
 /**
  * 이번주 + 다음주 구독 배송 수량 계산
@@ -268,8 +277,10 @@ const generateProductionPlan = async () => {
   // 일평균 필요량
   const dailyNeed = Math.round(milkCalc.total_raw_milk_l / 7 * 10) / 10
 
-  // 목장 생산 vs 수요 비교
-  const availableForFactory = DAILY_MILKING_L  // 납유 쿼터는 ERP 밖
+  // ★ 핵심 구조: 주문 생산 먼저 → 남는 양만 진흥회 납유
+  const dailyToFactory = dailyNeed  // D2O 공장에서 생산할 양
+  const dailyToDairy = Math.round((DAILY_MILKING_L - dailyNeed) * 10) / 10  // 진흥회 납유량
+  const weeklyToDairy = Math.round(dailyToDairy * 7 * 10) / 10
 
   return {
     period: `${thisWeekKey} (이번주)`,
@@ -290,26 +301,43 @@ const generateProductionPlan = async () => {
     raw_milk: {
       weekly_need_l: milkCalc.total_raw_milk_l,
       daily_need_l: dailyNeed,
+      loss_rate_pct: LOSS_RATE * 100,
       breakdown: milkCalc.breakdown,
     },
 
-    // 목장 생산 현황
+    // 원유 배분 계획
+    milk_allocation: {
+      daily_milking_l: DAILY_MILKING_L,
+      daily_to_factory_l: dailyToFactory,
+      daily_to_dairy_l: dailyToDairy,
+      weekly_to_factory_l: Math.round(dailyToFactory * 7 * 10) / 10,
+      weekly_to_dairy_l: weeklyToDairy,
+      note: '주문 생산 먼저 → 남는 양만 낙농진흥회 납유',
+    },
+
+    // 목장 정보
     farm_capacity: {
       daily_milking_l: DAILY_MILKING_L,
       weekly_milking_l: DAILY_MILKING_L * 7,
-      dairy_quota_l: DAIRY_QUOTA_L,
-      note: '낙농진흥회 납유 200L/일은 ERP 밖 별도 집계',
+    },
+
+    // 스마트스토어 상태
+    smartstore: {
+      status: 'HACCP_PENDING',
+      current_products: '에프트밀크 (반려식물 퇴비)',
+      dairy_launch_eta: 'HACCP 인증 후 ~1개월',
+      note: '유제품 미등록 — 자사몰/B2B/카페 주문만 집계',
     },
 
     // 결론
     summary: {
-      daily_available: availableForFactory,
-      daily_needed: dailyNeed,
-      surplus_l: Math.round((availableForFactory - dailyNeed) * 10) / 10,
-      status: availableForFactory >= dailyNeed ? '충분' : '부족',
-      message: availableForFactory >= dailyNeed
-        ? `일 ${availableForFactory}L 착유 중 ${dailyNeed}L 필요. 여유분 ${Math.round(availableForFactory - dailyNeed)}L`
-        : `⚠️ 일 ${dailyNeed}L 필요하나 ${availableForFactory}L만 생산 가능. ${Math.round(dailyNeed - availableForFactory)}L 부족!`,
+      daily_milking: DAILY_MILKING_L,
+      daily_to_factory: dailyToFactory,
+      daily_to_dairy: dailyToDairy,
+      status: dailyToDairy >= 0 ? '정상' : '⚠️ 생산량 초과',
+      message: dailyToDairy >= 0
+        ? `일 ${DAILY_MILKING_L}L 착유 → D2O 생산 ${dailyToFactory}L + 진흥회 납유 ${dailyToDairy}L`
+        : `⚠️ 일 ${dailyNeed}L 필요하나 ${DAILY_MILKING_L}L만 착유 가능. ${Math.abs(dailyToDairy)}L 부족!`,
     },
   }
 }
@@ -329,7 +357,7 @@ const getWeekKey = (date) => {
 module.exports = {
   RAW_MILK_BOM,
   DAILY_MILKING_L,
-  DAIRY_QUOTA_L,
+  LOSS_RATE,
   getSubscriptionDemand,
   getPendingOrderDemand,
   getCafeDailyAverage,

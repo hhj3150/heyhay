@@ -45,8 +45,8 @@ export default function ProductionPlan() {
     return <div className="flex items-center justify-center h-64 text-slate-400">데이터 없음</div>
   }
 
-  const { summary, raw_milk, demand_by_sku, demand_by_channel, farm_capacity } = plan
-  const isSufficient = summary.status === '충분'
+  const { summary, raw_milk, demand_by_sku, demand_by_channel, farm_capacity, milk_allocation, smartstore } = plan
+  const isSufficient = summary.status === '정상'
 
   // 차트용 SKU별 원유 소요량
   const chartData = (raw_milk.breakdown || []).map((b) => ({
@@ -73,7 +73,7 @@ export default function ProductionPlan() {
         <p className="text-xs sm:text-sm text-slate-500 mt-0.5">{plan.period} · 주문 기반 원유 수요 역산</p>
       </div>
 
-      {/* 핵심 지표 — 오늘 D2O에 보낼 양 */}
+      {/* 핵심 지표 — 원유 배분 (착유 → D2O → 진흥회) */}
       <Card className={cn('border-2', isSufficient ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50')}>
         <CardContent className="p-4 sm:p-6">
           <div className="flex items-center gap-2 mb-3">
@@ -83,27 +83,46 @@ export default function ProductionPlan() {
             <span className={cn('text-sm font-bold', isSufficient ? 'text-green-700' : 'text-red-700')}>
               {summary.status}
             </span>
+            <span className="text-[10px] text-slate-400 ml-auto">loss {raw_milk.loss_rate_pct}%</span>
           </div>
 
           <div className="grid grid-cols-3 gap-3 text-center">
-            <div>
-              <p className="text-[10px] sm:text-xs text-slate-500">일 착유량</p>
-              <p className="text-2xl sm:text-3xl font-black text-slate-800">{summary.daily_available}</p>
+            <div className="p-2 bg-white/60 rounded-xl">
+              <p className="text-[10px] sm:text-xs text-slate-500">🐄 일 착유</p>
+              <p className="text-2xl sm:text-3xl font-black text-slate-800">{summary.daily_milking}</p>
               <p className="text-[10px] text-slate-400">L/일</p>
             </div>
-            <div>
-              <p className="text-[10px] sm:text-xs text-slate-500">D2O 필요량</p>
-              <p className="text-2xl sm:text-3xl font-black text-blue-600">{summary.daily_needed}</p>
+            <div className="p-2 bg-white/60 rounded-xl">
+              <p className="text-[10px] sm:text-xs text-slate-500">🏭 D2O 생산</p>
+              <p className="text-2xl sm:text-3xl font-black text-blue-600">{summary.daily_to_factory}</p>
               <p className="text-[10px] text-slate-400">L/일</p>
             </div>
-            <div>
-              <p className="text-[10px] sm:text-xs text-slate-500">{isSufficient ? '여유분' : '⚠️ 부족'}</p>
-              <p className={cn('text-2xl sm:text-3xl font-black', isSufficient ? 'text-green-600' : 'text-red-600')}>
-                {Math.abs(summary.surplus_l)}
+            <div className="p-2 bg-white/60 rounded-xl">
+              <p className="text-[10px] sm:text-xs text-slate-500">🚛 진흥회 납유</p>
+              <p className={cn('text-2xl sm:text-3xl font-black', summary.daily_to_dairy >= 0 ? 'text-emerald-600' : 'text-red-600')}>
+                {summary.daily_to_dairy}
               </p>
               <p className="text-[10px] text-slate-400">L/일</p>
             </div>
           </div>
+
+          {/* 원유 흐름 바 */}
+          {milk_allocation && (
+            <div className="mt-3">
+              <div className="h-6 rounded-full overflow-hidden flex bg-slate-200">
+                <div className="bg-blue-500 flex items-center justify-center text-[9px] text-white font-bold"
+                  style={{ width: `${Math.min((summary.daily_to_factory / summary.daily_milking) * 100, 100)}%` }}>
+                  D2O {summary.daily_to_factory}L
+                </div>
+                {summary.daily_to_dairy > 0 && (
+                  <div className="bg-emerald-400 flex items-center justify-center text-[9px] text-white font-bold"
+                    style={{ width: `${(summary.daily_to_dairy / summary.daily_milking) * 100}%` }}>
+                    진흥회 {summary.daily_to_dairy}L
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           <p className="text-xs text-slate-500 mt-3 text-center bg-white/50 rounded-lg py-2">
             {summary.message}
@@ -219,10 +238,17 @@ export default function ProductionPlan() {
         </Card>
       )}
 
+      {/* 스마트스토어 상태 */}
+      {smartstore && (
+        <div className="text-[10px] text-center bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-0.5">
+          <p className="font-bold text-amber-700">📋 스마트스토어: {smartstore.current_products}</p>
+          <p className="text-amber-600">{smartstore.dairy_launch_eta} · {smartstore.note}</p>
+        </div>
+      )}
+
       {/* 목장 정보 */}
       <div className="text-[10px] text-slate-400 text-center pb-4 space-y-0.5">
-        <p>송영신목장 → D2O 공장 | 일 착유량 ~{farm_capacity.daily_milking_l}L</p>
-        <p>낙농진흥회 납유 {farm_capacity.dairy_quota_l}L/일 — ERP 밖 별도 집계</p>
+        <p>송영신목장 일 착유 ~{farm_capacity?.daily_milking_l}L → D2O 생산 먼저 → 잔여분 진흥회 납유</p>
       </div>
     </div>
   )
