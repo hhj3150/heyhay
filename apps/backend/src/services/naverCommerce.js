@@ -22,13 +22,15 @@ const getAccessToken = async () => {
     throw new Error('네이버 커머스 API 인증 정보가 설정되지 않았습니다 (NAVER_COMMERCE_CLIENT_ID, NAVER_COMMERCE_CLIENT_SECRET)')
   }
 
-  // BCrypt 기반 시그니처 생성 (네이버 커머스 API 요구사항)
+  // 네이버 커머스 API: bcrypt 기반 전자서명
+  // client_secret은 bcrypt 해시 자체 ($2a$04$...)
+  // 서명 = bcrypt(clientId + '_' + timestamp, client_secret)
+  const bcrypt = require('bcryptjs')
   const timestamp = Date.now()
-  const crypto = require('crypto')
-  const signature = crypto
-    .createHmac('sha256', clientSecret)
-    .update(`${clientId}_${timestamp}`)
-    .digest('base64')
+  const signatureBase = `${clientId}_${timestamp}`
+
+  // clientSecret이 이미 bcrypt salt+hash 형태이므로 이를 직접 사용
+  const signature = bcrypt.hashSync(signatureBase, clientSecret)
 
   const params = new URLSearchParams({
     client_id: clientId,
