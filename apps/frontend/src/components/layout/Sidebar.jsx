@@ -6,6 +6,7 @@ import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, Milk, Factory, ShoppingCart, Coffee,
   LogOut, ChevronLeft, ChevronRight, Baby, Heart, Wheat,
+  Package, CreditCard, BarChart3,
 } from 'lucide-react'
 import { useState } from 'react'
 import useAuthStore from '@/stores/authStore'
@@ -26,7 +27,11 @@ const NAV_ITEMS = [
     { label: '번식 관리', icon: Baby, path: '/farm/breeding' },
   ]},
   { id: 'factory', label: '공장 관리', icon: Factory, path: '/factory', color: 'text-blue-500' },
-  { id: 'market', label: '온라인 마켓', icon: ShoppingCart, path: '/market', color: 'text-emerald-500' },
+  { id: 'market', label: '온라인 마켓', icon: ShoppingCart, path: '/market', color: 'text-emerald-500', children: [
+    { label: '주문 관리', icon: Package, path: '/market/orders' },
+    { label: '구독 관리', icon: CreditCard, path: '/market/subscriptions' },
+    { label: '현황 요약', icon: BarChart3, path: '/market/overview' },
+  ]},
   { id: 'cafe', label: '밀크카페', icon: Coffee, path: '/cafe', color: 'text-violet-500' },
 ]
 
