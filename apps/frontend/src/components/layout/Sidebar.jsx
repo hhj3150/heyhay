@@ -5,7 +5,7 @@
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, Milk, Factory, ShoppingCart, Coffee,
-  LogOut, ChevronLeft, ChevronRight,
+  LogOut, ChevronLeft, ChevronRight, Baby, Heart, Wheat,
 } from 'lucide-react'
 import { useState } from 'react'
 import useAuthStore from '@/stores/authStore'
@@ -20,7 +20,11 @@ const ROLE_PERMISSIONS = {
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: '대시보드', icon: LayoutDashboard, path: '/', color: 'text-slate-600' },
-  { id: 'farm', label: '목장 관리', icon: Milk, path: '/farm', color: 'text-amber-500' },
+  { id: 'farm', label: '목장 관리', icon: Milk, path: '/farm', color: 'text-amber-500', children: [
+    { label: '개체 관리', icon: Milk, path: '/farm/animals' },
+    { label: '착유 관리', icon: Milk, path: '/farm/milking' },
+    { label: '번식 관리', icon: Baby, path: '/farm/breeding' },
+  ]},
   { id: 'factory', label: '공장 관리', icon: Factory, path: '/factory', color: 'text-blue-500' },
   { id: 'market', label: '온라인 마켓', icon: ShoppingCart, path: '/market', color: 'text-emerald-500' },
   { id: 'cafe', label: '밀크카페', icon: Coffee, path: '/cafe', color: 'text-violet-500' },
@@ -54,24 +58,46 @@ export default function Sidebar() {
       </div>
 
       {/* 메뉴 */}
-      <nav className="flex-1 py-4 space-y-1 px-2">
-        {visibleItems.map(({ id, label, icon: Icon, path, color }) => (
-          <NavLink
-            key={id}
-            to={path}
-            end={path === '/'}
-            className={({ isActive }) =>
-              cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                isActive
-                  ? 'bg-slate-100 text-slate-900'
-                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700',
-              )
-            }
-          >
-            <Icon className={cn('w-5 h-5 shrink-0', color)} />
-            {!collapsed && <span>{label}</span>}
-          </NavLink>
+      <nav className="flex-1 py-4 space-y-1 px-2 overflow-y-auto">
+        {visibleItems.map(({ id, label, icon: Icon, path, color, children }) => (
+          <div key={id}>
+            <NavLink
+              to={path}
+              end={path === '/' || !!children}
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                  isActive
+                    ? 'bg-slate-100 text-slate-900'
+                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700',
+                )
+              }
+            >
+              <Icon className={cn('w-5 h-5 shrink-0', color)} />
+              {!collapsed && <span>{label}</span>}
+            </NavLink>
+            {!collapsed && children && (
+              <div className="ml-6 mt-0.5 space-y-0.5">
+                {children.map((sub) => (
+                  <NavLink
+                    key={sub.path}
+                    to={sub.path}
+                    className={({ isActive }) =>
+                      cn(
+                        'flex items-center gap-2 px-3 py-1.5 rounded-md text-xs transition-colors',
+                        isActive
+                          ? 'bg-amber-50 text-amber-700 font-semibold'
+                          : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50',
+                      )
+                    }
+                  >
+                    <sub.icon className="w-3.5 h-3.5" />
+                    <span>{sub.label}</span>
+                  </NavLink>
+                ))}
+              </div>
+            )}
+          </div>
         ))}
       </nav>
 
