@@ -3,12 +3,13 @@
  * 4개 모듈 KPI + 알림 + 원유 흐름도
  */
 import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { apiGet, apiPut } from '@/lib/api'
 import {
   Milk, Factory, ShoppingCart, Coffee, TrendingUp, TrendingDown,
-  AlertTriangle, Bell, CheckCircle2, Users, CreditCard,
+  AlertTriangle, Bell, CheckCircle2, Users, CreditCard, ChevronRight,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -38,6 +39,7 @@ export default function DashboardPage() {
     if (res.success) fetchData()
   }
 
+  const navigate = useNavigate()
   const farm = kpi?.farm || {}
   const factory = kpi?.factory || {}
   const market = kpi?.market || {}
@@ -57,10 +59,13 @@ export default function DashboardPage() {
       {/* KPI 카드 */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {/* 오늘 착유량 */}
-        <Card className="hover:shadow-md transition-shadow">
+        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/farm/milk')}>
           <CardContent className="p-4">
-            <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center mb-3">
-              <Milk className="w-5 h-5 text-amber-500" />
+            <div className="flex justify-between items-start">
+              <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center mb-3">
+                <Milk className="w-5 h-5 text-amber-500" />
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-300" />
             </div>
             <p className="text-xs text-slate-500">오늘 착유량</p>
             <p className="text-lg font-bold text-amber-600">{farm.today_milk_l?.toFixed(1) || '0'}L</p>
@@ -75,10 +80,13 @@ export default function DashboardPage() {
         </Card>
 
         {/* 공장 */}
-        <Card className="hover:shadow-md transition-shadow">
+        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/factory/plan')}>
           <CardContent className="p-4">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center mb-3">
-              <Factory className="w-5 h-5 text-blue-500" />
+            <div className="flex justify-between items-start">
+              <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center mb-3">
+                <Factory className="w-5 h-5 text-blue-500" />
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-300" />
             </div>
             <p className="text-xs text-slate-500">공장 가동</p>
             <p className="text-lg font-bold">{factory.today_batches || 0}배치</p>
@@ -87,10 +95,13 @@ export default function DashboardPage() {
         </Card>
 
         {/* 오늘 주문 */}
-        <Card className="hover:shadow-md transition-shadow">
+        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/market/orders')}>
           <CardContent className="p-4">
-            <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center mb-3">
-              <ShoppingCart className="w-5 h-5 text-emerald-500" />
+            <div className="flex justify-between items-start">
+              <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center mb-3">
+                <ShoppingCart className="w-5 h-5 text-emerald-500" />
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-300" />
             </div>
             <p className="text-xs text-slate-500">오늘 주문</p>
             <p className="text-lg font-bold text-emerald-600">{market.today_orders || 0}건</p>
@@ -99,33 +110,42 @@ export default function DashboardPage() {
         </Card>
 
         {/* 구독자 */}
-        <Card className="hover:shadow-md transition-shadow">
+        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/market/subscriptions')}>
           <CardContent className="p-4">
-            <div className="w-10 h-10 rounded-lg bg-violet-50 flex items-center justify-center mb-3">
-              <Users className="w-5 h-5 text-violet-500" />
+            <div className="flex justify-between items-start">
+              <div className="w-10 h-10 rounded-lg bg-violet-50 flex items-center justify-center mb-3">
+                <Users className="w-5 h-5 text-violet-500" />
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-300" />
             </div>
             <p className="text-xs text-slate-500">활성 구독</p>
             <p className="text-lg font-bold text-violet-600">{market.active_subscribers || 0}명</p>
           </CardContent>
         </Card>
 
-        {/* 카페 매출 */}
-        <Card className="hover:shadow-md transition-shadow">
+        {/* B2B 거래처 */}
+        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/market/b2b')}>
           <CardContent className="p-4">
-            <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center mb-3">
-              <Coffee className="w-5 h-5 text-purple-500" />
+            <div className="flex justify-between items-start">
+              <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center mb-3">
+                <Coffee className="w-5 h-5 text-purple-500" />
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-300" />
             </div>
-            <p className="text-xs text-slate-500">카페 매출</p>
+            <p className="text-xs text-slate-500">B2B 거래처</p>
             <p className="text-lg font-bold">{(cafe.today_revenue || 0).toLocaleString()}원</p>
             <p className="text-[10px] text-slate-400">월 {(cafe.month_revenue || 0).toLocaleString()}</p>
           </CardContent>
         </Card>
 
         {/* 월 매출 합계 */}
-        <Card className="hover:shadow-md transition-shadow">
+        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/market/overview')}>
           <CardContent className="p-4">
-            <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center mb-3">
-              <TrendingUp className="w-5 h-5 text-slate-600" />
+            <div className="flex justify-between items-start">
+              <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center mb-3">
+                <TrendingUp className="w-5 h-5 text-slate-600" />
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-300" />
             </div>
             <p className="text-xs text-slate-500">월 매출 합계</p>
             <p className="text-lg font-bold">{totalMonthRevenue.toLocaleString()}원</p>
