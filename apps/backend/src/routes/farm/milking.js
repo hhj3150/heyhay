@@ -199,4 +199,26 @@ router.get('/', validate(listMilkingSchema, 'query'), async (req, res, next) => 
   }
 })
 
+/** POST /robot-sync — Lely A3 로봇 착유 데이터 동기화 */
+router.post('/robot-sync', async (req, res, next) => {
+  try {
+    const { syncFromT4C } = require('../../services/lelyT4C')
+    const result = await syncFromT4C()
+    res.json(apiResponse(result))
+  } catch (err) {
+    next(err)
+  }
+})
+
+/** GET /robot-status — Lely A3 로봇 상태 */
+router.get('/robot-status', async (req, res, next) => {
+  try {
+    const { getRobotStatus } = require('../../services/lelyT4C')
+    const status = await getRobotStatus()
+    res.json(apiResponse(status))
+  } catch (err) {
+    next(err)
+  }
+})
+
 module.exports = router
