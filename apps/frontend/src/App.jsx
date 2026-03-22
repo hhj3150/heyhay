@@ -7,6 +7,8 @@ import LoginPage from '@/pages/LoginPage'
 import DashboardPage from '@/pages/DashboardPage'
 import FarmRoutes from '@/pages/farm/FarmRoutes'
 import FactoryRoutes from '@/pages/factory/FactoryRoutes'
+import MarketRoutes from '@/pages/market/MarketRoutes'
+import CafeRoutes from '@/pages/cafe/CafeRoutes'
 
 export default function App() {
   return (
@@ -17,9 +19,8 @@ export default function App() {
           <Route index element={<DashboardPage />} />
           <Route path="farm/*" element={<FarmRoutes />} />
           <Route path="factory/*" element={<FactoryRoutes />} />
-          {/* Phase 3: 온라인 마켓 + 카페 */}
-          {/* <Route path="market/*" element={<MarketRoutes />} /> */}
-          {/* <Route path="cafe/*" element={<CafeRoutes />} /> */}
+          <Route path="market/*" element={<MarketRoutes />} />
+          <Route path="cafe/*" element={<CafeRoutes />} />
         </Route>
       </Routes>
     </BrowserRouter>
