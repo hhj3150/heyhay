@@ -97,10 +97,10 @@ export default function OrderBoard() {
   return (
     <div className="space-y-4">
       {/* 상단 바 */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <Package className="w-6 h-6 text-emerald-500" />
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <Package className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-500" />
             주문 관리
           </h1>
           {urgentCount > 0 && (
@@ -112,12 +112,12 @@ export default function OrderBoard() {
             </div>
           )}
         </div>
-        <div className="flex gap-2 items-center">
-          <div className="relative">
+        <div className="flex gap-2 items-center w-full sm:w-auto">
+          <div className="relative flex-1 sm:flex-none">
             <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
             <Input
               placeholder="주문번호 / 고객명 검색"
-              className="pl-9 w-64"
+              className="pl-9 w-full sm:w-64"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -130,7 +130,7 @@ export default function OrderBoard() {
 
       {/* 상단 요약 */}
       {stats && (
-        <div className="grid grid-cols-6 gap-3">
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-3">
           {COLUMNS.map((col) => {
             const count = orders[col.status]?.length || 0
             return (
@@ -147,11 +147,11 @@ export default function OrderBoard() {
       )}
 
       {/* 칸반 보드 */}
-      <div className="flex gap-3 overflow-x-auto pb-4" style={{ minHeight: '60vh' }}>
+      <div className="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory" style={{ minHeight: '50vh' }}>
         {COLUMNS.map((col) => {
           const colOrders = filterOrders(orders[col.status] || [])
           return (
-            <div key={col.status} className="flex-shrink-0 w-72">
+            <div key={col.status} className="flex-shrink-0 w-64 sm:w-72 snap-start">
               <div className={cn('rounded-t-lg border-t-4 p-3 mb-2', col.color, col.bg)}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">

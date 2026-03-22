@@ -149,7 +149,7 @@ export default function DeliverySchedule() {
       </div>
 
       {/* 주간 그리드 */}
-      <div className="grid grid-cols-7 gap-2">
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-7 gap-2">
         {weekDates.map((date, idx) => {
           const dateStr = formatDate(date)
           const dayOrders = orders[dateStr] || []

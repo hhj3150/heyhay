@@ -95,7 +95,7 @@ export default function SubscriptionDashboard() {
       </div>
 
       {/* 핵심 지표 */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4">
         <Card className="border-l-4 border-l-green-500">
           <CardContent className="p-4 flex items-center gap-3">
             <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center">
@@ -155,7 +155,7 @@ export default function SubscriptionDashboard() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
         {/* 구독 분포 파이차트 */}
         <Card>
           <CardHeader>

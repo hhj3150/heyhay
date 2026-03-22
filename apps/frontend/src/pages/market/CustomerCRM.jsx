@@ -90,8 +90,8 @@ export default function CustomerCRM() {
 
   return (
     <div className="flex gap-6 h-[calc(100vh-7rem)]">
-      {/* 왼쪽: 고객 목록 */}
-      <div className={cn('flex flex-col', selected ? 'w-[45%]' : 'w-full')}>
+      {/* 왼쪽: 고객 목록 — 모바일에서 상세 열리면 숨김 */}
+      <div className={cn('flex flex-col', selected ? 'hidden lg:flex lg:w-[45%]' : 'w-full')}>
         <div className="flex justify-between items-center mb-4">
           <div>
             <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
@@ -182,9 +182,9 @@ export default function CustomerCRM() {
         </div>
       </div>
 
-      {/* 오른쪽: 고객 상세 패널 */}
+      {/* 오른쪽: 고객 상세 패널 — 모바일에서 전체 너비 */}
       {selected && (
-        <div className="w-[55%] border-l pl-6 overflow-y-auto">
+        <div className="w-full lg:w-[55%] lg:border-l lg:pl-6 overflow-y-auto">
           {/* 상단: 고객 프로필 */}
           <div className="flex items-start justify-between mb-6">
             <div>
