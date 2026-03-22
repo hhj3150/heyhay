@@ -23,4 +23,30 @@ router.get('/production-plan', async (req, res, next) => {
   }
 })
 
+/** GET /plan/demand — 프론트엔드 착유량 페이지용 수요 요약 */
+router.get('/plan/demand', async (req, res, next) => {
+  try {
+    const { generateProductionPlan } = require('../../services/milkDemand')
+    const plan = await generateProductionPlan()
+    res.json({
+      success: true,
+      data: {
+        total_milk_needed_l: plan.raw_milk.daily_need_l,
+        daily_to_factory_l: plan.milk_allocation.daily_to_factory_l,
+        daily_to_dairy_l: plan.milk_allocation.daily_to_dairy_l,
+        breakdown: plan.raw_milk.breakdown,
+        demand_by_sku: plan.demand_by_sku,
+      },
+      meta: {},
+    })
+  } catch (err) {
+    // 데이터 없어도 기본값 반환
+    res.json({
+      success: true,
+      data: { total_milk_needed_l: 0, daily_to_factory_l: 0, daily_to_dairy_l: 550, breakdown: [] },
+      meta: {},
+    })
+  }
+})
+
 module.exports = router

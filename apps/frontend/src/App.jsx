@@ -1,7 +1,8 @@
 /**
- * @fileoverview 메인 앱 라우터
+ * @fileoverview 메인 앱 라우터 + 에러 바운더리
  */
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import ErrorBoundary from '@/components/ErrorBoundary'
 import AppLayout from '@/components/layout/AppLayout'
 import LoginPage from '@/pages/LoginPage'
 import DashboardPage from '@/pages/DashboardPage'
@@ -12,17 +13,19 @@ import CafeRoutes from '@/pages/cafe/CafeRoutes'
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/" element={<AppLayout />}>
-          <Route index element={<DashboardPage />} />
-          <Route path="farm/*" element={<FarmRoutes />} />
-          <Route path="factory/*" element={<FactoryRoutes />} />
-          <Route path="market/*" element={<MarketRoutes />} />
-          <Route path="cafe/*" element={<CafeRoutes />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/" element={<AppLayout />}>
+            <Route index element={<ErrorBoundary><DashboardPage /></ErrorBoundary>} />
+            <Route path="farm/*" element={<ErrorBoundary><FarmRoutes /></ErrorBoundary>} />
+            <Route path="factory/*" element={<ErrorBoundary><FactoryRoutes /></ErrorBoundary>} />
+            <Route path="market/*" element={<ErrorBoundary><MarketRoutes /></ErrorBoundary>} />
+            <Route path="cafe/*" element={<ErrorBoundary><CafeRoutes /></ErrorBoundary>} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </ErrorBoundary>
   )
 }
