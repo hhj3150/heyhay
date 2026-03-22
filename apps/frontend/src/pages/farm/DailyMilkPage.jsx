@@ -62,9 +62,9 @@ export default function DailyMilkPage() {
       }
     }
     if (monthRes.success) setMonthlyStats(monthRes.data)
-    if (priceRes.success) {
-      if (priceRes.data?.dairy_price) setDairyPrice(priceRes.data.dairy_price)
-      if (priceRes.data?.d2o_price) setD2oPrice(priceRes.data.d2o_price)
+    if (priceRes.success && priceRes.data) {
+      setDairyPrice(parseInt(priceRes.data.dairy_price) || 1130)
+      setD2oPrice(parseInt(priceRes.data.d2o_price) || 1200)
     }
   }, [])
 
