@@ -17,7 +17,7 @@ const router = express.Router()
 const orderSchema = z.object({
   customer_id: z.string().uuid().optional(),
   subscription_id: z.string().uuid().optional(),
-  channel: z.enum(['SMARTSTORE', 'OWN_MALL', 'B2B', 'PHONE', 'KAKAO', 'VISIT', 'OFFLINE']),
+  channel: z.enum(['SMARTSTORE', 'OWN_MALL', 'B2B', 'PHONE', 'KAKAO', 'VISIT', 'FACTORY_DIRECT', 'OFFLINE']),
   external_order_id: z.string().optional(),
   items: z.array(z.object({
     sku_id: z.string().uuid(),

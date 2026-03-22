@@ -31,6 +31,7 @@ const CHANNEL_BADGE = {
   PHONE: { label: '전화주문', color: 'bg-orange-100 text-orange-700' },
   KAKAO: { label: '카톡주문', color: 'bg-yellow-100 text-yellow-700' },
   VISIT: { label: '방문주문', color: 'bg-pink-100 text-pink-700' },
+  FACTORY_DIRECT: { label: '공장직판', color: 'bg-cyan-100 text-cyan-700' },
   OFFLINE: { label: '오프라인', color: 'bg-purple-100 text-purple-700' },
 }
 
@@ -110,9 +111,19 @@ export default function OrderBoard() {
     })
 
     if (res.success) {
-      // 결제 완료 체크됐으면 바로 PAID로 변경
-      if (o.paid && res.data?.id) {
-        await apiPut(`/market/orders/${res.data.id}`, { status: 'PAID' })
+      const orderId = res.data?.id
+      if (orderId) {
+        if (o.channel === 'FACTORY_DIRECT') {
+          // 공장직판: 결제완료 → 배송완료 한 번에
+          await apiPut(`/market/orders/${orderId}`, { status: 'PAID' })
+          await apiPut(`/market/orders/${orderId}`, { status: 'PROCESSING' })
+          await apiPut(`/market/orders/${orderId}`, { status: 'PACKED' })
+          await apiPut(`/market/orders/${orderId}`, { status: 'SHIPPED', courier: '현장수령', tracking_number: '직접수령' })
+          await apiPut(`/market/orders/${orderId}`, { status: 'DELIVERED' })
+        } else if (o.paid) {
+          // 결제 완료 체크됐으면 PAID로
+          await apiPut(`/market/orders/${orderId}`, { status: 'PAID' })
+        }
       }
       setNewOrderModal(false)
       setNewOrder({ ...EMPTY_OFFLINE_ORDER })
@@ -353,6 +364,7 @@ export default function OrderBoard() {
                 <label className="text-xs font-semibold text-slate-600 mb-1.5 block">주문 경로</label>
                 <div className="flex gap-2 flex-wrap">
                   {[
+                    { value: 'FACTORY_DIRECT', label: '🏭 공장직판', color: 'bg-cyan-100 text-cyan-700 border-cyan-300' },
                     { value: 'PHONE', label: '📞 전화', color: 'bg-orange-100 text-orange-700 border-orange-300' },
                     { value: 'KAKAO', label: '💬 카톡', color: 'bg-yellow-100 text-yellow-700 border-yellow-300' },
                     { value: 'VISIT', label: '🏠 방문', color: 'bg-pink-100 text-pink-700 border-pink-300' },
@@ -383,18 +395,28 @@ export default function OrderBoard() {
                 </div>
               </div>
 
-              {/* 배송 주소 */}
-              <div>
-                <label className="text-xs font-semibold text-slate-600">배송 주소</label>
-                <Input placeholder="주소 입력" value={newOrder.shipping_address}
-                  onChange={(e) => setNewOrder((o) => ({ ...o, shipping_address: e.target.value }))} />
-              </div>
+              {/* 공장직판 안내 */}
+              {newOrder.channel === 'FACTORY_DIRECT' && (
+                <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-3 text-sm text-cyan-700">
+                  🏭 현장 판매 — 결제 완료 후 바로 <strong>배송완료</strong> 처리됩니다
+                </div>
+              )}
 
-              <div>
-                <label className="text-xs font-semibold text-slate-600">배송 메모</label>
-                <Input placeholder="부재시 경비실 / 벨 누르지 마세요 등" value={newOrder.shipping_memo}
-                  onChange={(e) => setNewOrder((o) => ({ ...o, shipping_memo: e.target.value }))} />
-              </div>
+              {/* 배송 주소 (공장직판이 아닐 때만) */}
+              {newOrder.channel !== 'FACTORY_DIRECT' && (
+                <>
+                  <div>
+                    <label className="text-xs font-semibold text-slate-600">배송 주소</label>
+                    <Input placeholder="주소 입력" value={newOrder.shipping_address}
+                      onChange={(e) => setNewOrder((o) => ({ ...o, shipping_address: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-slate-600">배송 메모</label>
+                    <Input placeholder="부재시 경비실 / 벨 누르지 마세요 등" value={newOrder.shipping_memo}
+                      onChange={(e) => setNewOrder((o) => ({ ...o, shipping_memo: e.target.value }))} />
+                  </div>
+                </>
+              )}
 
               {/* 주문 상품 */}
               <div>
