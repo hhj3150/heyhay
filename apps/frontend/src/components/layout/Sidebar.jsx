@@ -24,9 +24,7 @@ const ROLE_PERMISSIONS = {
 const NAV_ITEMS = [
   { id: 'dashboard', label: '대시보드', icon: LayoutDashboard, path: '/', color: 'text-slate-600' },
   { id: 'farm', label: '목장 관리', icon: Milk, path: '/farm', color: 'text-amber-500', children: [
-    { label: '개체 관리', icon: Milk, path: '/farm/animals' },
-    { label: '착유 관리', icon: Milk, path: '/farm/milking' },
-    { label: '번식 관리', icon: Baby, path: '/farm/breeding' },
+    { label: '오늘 착유량', icon: Milk, path: '/farm/milk' },
   ]},
   { id: 'factory', label: '공장 관리', icon: Factory, path: '/factory', color: 'text-blue-500', children: [
     { label: '생산 계획', icon: ClipboardList, path: '/factory/plan' },

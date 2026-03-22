@@ -199,6 +199,55 @@ router.get('/', validate(listMilkingSchema, 'query'), async (req, res, next) => 
   }
 })
 
+/** POST /daily-total — 일일 총 착유량 수동 입력 */
+router.post('/daily-total', async (req, res, next) => {
+  try {
+    const { amount_l, date } = req.body
+    if (!amount_l || amount_l <= 0) {
+      return res.status(400).json(apiError('INVALID', '착유량을 입력하세요'))
+    }
+    const targetDate = date || new Date().toISOString().split('T')[0]
+
+    // UPSERT: 같은 날짜면 업데이트
+    const result = await query(`
+      INSERT INTO daily_milk_totals (date, total_l, recorded_by)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (date) DO UPDATE SET total_l = $2, updated_at = NOW()
+      RETURNING *
+    `, [targetDate, amount_l, req.user?.id])
+
+    res.status(201).json(apiResponse(result.rows[0]))
+  } catch (err) {
+    // 테이블 없으면 생성 후 재시도
+    if (err.code === '42P01') {
+      try {
+        await query(`
+          CREATE TABLE IF NOT EXISTS daily_milk_totals (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            date DATE UNIQUE NOT NULL,
+            total_l NUMERIC(8,2) NOT NULL,
+            recorded_by UUID,
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW()
+          )
+        `)
+        const { amount_l, date } = req.body
+        const targetDate = date || new Date().toISOString().split('T')[0]
+        const result = await query(`
+          INSERT INTO daily_milk_totals (date, total_l, recorded_by)
+          VALUES ($1, $2, $3)
+          ON CONFLICT (date) DO UPDATE SET total_l = $2, updated_at = NOW()
+          RETURNING *
+        `, [targetDate, amount_l, req.user?.id])
+        return res.status(201).json(apiResponse(result.rows[0]))
+      } catch (retryErr) {
+        return next(retryErr)
+      }
+    }
+    next(err)
+  }
+})
+
 /** POST /robot-sync — Lely A3 로봇 착유 데이터 동기화 */
 router.post('/robot-sync', async (req, res, next) => {
   try {
