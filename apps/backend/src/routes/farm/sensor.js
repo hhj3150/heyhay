@@ -7,7 +7,7 @@
  */
 const express = require('express')
 const { query } = require('../../config/database')
-const { apiResponse, apiError } = require('@heyhay/shared')
+const { apiResponse, apiError } = require('../../lib/shared')
 
 const router = express.Router()
 

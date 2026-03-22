@@ -9,7 +9,7 @@ const express = require('express')
 const { z } = require('zod')
 const { query } = require('../../config/database')
 const { validate } = require('../../middleware/validate')
-const { apiResponse, apiError, CCP_LIMITS } = require('@heyhay/shared')
+const { apiResponse, apiError, CCP_LIMITS } = require('../../lib/shared')
 
 const router = express.Router()
 

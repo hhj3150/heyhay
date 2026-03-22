@@ -1,7 +1,7 @@
 /**
  * @fileoverview Zod 스키마 기반 요청 검증 미들웨어
  */
-const { apiError } = require('@heyhay/shared')
+const { apiError } = require('../lib/shared')
 
 /**
  * 요청 바디/쿼리/파라미터 검증 미들웨어 팩토리

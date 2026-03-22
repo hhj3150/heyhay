@@ -8,7 +8,7 @@
  * - 3차 실패: 구독 일시정지 + P2 알림
  */
 const { query, transaction } = require('../config/database')
-const { apiResponse, apiError } = require('@heyhay/shared')
+const { apiResponse, apiError } = require('../lib/shared')
 
 const MAX_RETRY = 3
 

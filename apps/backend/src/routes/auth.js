@@ -9,7 +9,7 @@ const env = require('../config/env')
 const { query } = require('../config/database')
 const { validate } = require('../middleware/validate')
 const { authenticate } = require('../middleware/auth')
-const { apiResponse, apiError } = require('@heyhay/shared')
+const { apiResponse, apiError } = require('../lib/shared')
 
 const router = express.Router()
 

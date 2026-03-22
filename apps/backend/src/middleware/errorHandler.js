@@ -1,7 +1,7 @@
 /**
  * @fileoverview 글로벌 에러 핸들링 미들웨어
  */
-const { apiError } = require('@heyhay/shared')
+const { apiError } = require('../lib/shared')
 
 /**
  * 404 핸들러

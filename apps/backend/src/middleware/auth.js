@@ -4,7 +4,7 @@
  */
 const jwt = require('jsonwebtoken')
 const env = require('../config/env')
-const { apiError, ROLE_PERMISSIONS } = require('@heyhay/shared')
+const { apiError, ROLE_PERMISSIONS } = require('../lib/shared')
 
 /**
  * JWT 토큰 검증 미들웨어
