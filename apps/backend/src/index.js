@@ -36,7 +36,7 @@ app.use('/api/v1/farm', authenticate, authorizeModule('farm'), require('./routes
 app.use('/api/v1/factory', authenticate, authorizeModule('factory'), require('./routes/factory'))
 app.use('/api/v1/market', authenticate, authorizeModule('market'), require('./routes/market'))
 app.use('/api/v1/cafe', authenticate, authorizeModule('cafe'), require('./routes/cafe'))
-// app.use('/api/v1/dashboard', authenticate, authorizeModule('dashboard'), require('./routes/dashboard'))
+app.use('/api/v1/dashboard', authenticate, authorizeModule('dashboard'), require('./routes/dashboard'))
 
 // --- 에러 핸들링 ---
 app.use(notFound)
