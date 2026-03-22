@@ -14,12 +14,18 @@ const router = express.Router()
 router.get('/kpi', async (req, res, next) => {
   try {
     const [milk, factory, rawMilk, orders, subs, cafe, alerts] = await Promise.all([
-      // 오늘 착유량 + 전일 대비
+      // 오늘 착유량 — daily_milk_totals (수동 입력) 우선, 없으면 milk_records
       query(`
         SELECT
-          COALESCE(SUM(amount_l) FILTER (WHERE DATE(milked_at) = CURRENT_DATE), 0) AS today_milk,
-          COALESCE(SUM(amount_l) FILTER (WHERE DATE(milked_at) = CURRENT_DATE - 1), 0) AS yesterday_milk,
-          COUNT(DISTINCT animal_id) FILTER (WHERE DATE(milked_at) = CURRENT_DATE) AS today_heads
+          COALESCE(
+            (SELECT total_l FROM daily_milk_totals WHERE date = CURRENT_DATE),
+            COALESCE(SUM(amount_l) FILTER (WHERE DATE(milked_at) = CURRENT_DATE), 0)
+          ) AS today_milk,
+          COALESCE(
+            (SELECT total_l FROM daily_milk_totals WHERE date = CURRENT_DATE - 1),
+            COALESCE(SUM(amount_l) FILTER (WHERE DATE(milked_at) = CURRENT_DATE - 1), 0)
+          ) AS yesterday_milk,
+          0 AS today_heads
         FROM milk_records
       `),
       // 공장: 오늘 생산 배치 수

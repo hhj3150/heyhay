@@ -42,21 +42,32 @@ const listMilkingSchema = z.object({
 
 // --- 라우트 ---
 
-/** GET /daily — 일별 착유 요약 */
+/** GET /daily — 일별 착유 요약 (daily_milk_totals 우선) */
 router.get('/daily', async (req, res, next) => {
   try {
     const days = parseInt(req.query.days || '30', 10)
 
+    // daily_milk_totals 테이블에서 먼저 조회
+    try {
+      const result = await query(`
+        SELECT date::text AS date, total_l
+        FROM daily_milk_totals
+        WHERE date >= CURRENT_DATE - $1
+        ORDER BY date DESC
+      `, [days])
+
+      if (result.rows.length > 0) {
+        return res.json(apiResponse(result.rows))
+      }
+    } catch (e) {
+      // 테이블 없으면 무시
+    }
+
+    // fallback: milk_records에서 조회
     const result = await query(`
       SELECT
         DATE(milked_at) AS date,
-        COUNT(DISTINCT animal_id) AS head_count,
-        SUM(amount_l) AS total_l,
-        SUM(amount_l) FILTER (WHERE destination = 'FACTORY') AS factory_l,
-        SUM(amount_l) FILTER (WHERE destination = 'DAIRY_ASSOC') AS dairy_assoc_l,
-        AVG(fat_pct) AS avg_fat,
-        AVG(protein_pct) AS avg_protein,
-        AVG(scc) AS avg_scc
+        SUM(amount_l) AS total_l
       FROM milk_records
       WHERE milked_at >= NOW() - INTERVAL '1 day' * $1
       GROUP BY DATE(milked_at)
