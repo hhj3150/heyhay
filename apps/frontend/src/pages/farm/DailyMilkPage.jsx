@@ -75,16 +75,19 @@ export default function DailyMilkPage() {
     if (!amount || amount <= 0) return
 
     setSaving(true)
+    const d2oAmount = parseFloat(d2oInput) || 0
+    const dairyAmount = Math.max(0, amount - d2oAmount)
+
     const res = await apiPost('/farm/milking/daily-total', {
       amount_l: amount,
-      dairy_assoc_l: dairyInput ? parseFloat(dairyInput) : 0,
-      d2o_l: d2oInput ? parseFloat(d2oInput) : 0,
+      dairy_assoc_l: dairyAmount,
+      d2o_l: d2oAmount,
       date: new Date().toISOString().split('T')[0],
     })
     if (res.success) {
       setTodaySaved(amount)
-      if (dairyInput) setDairySaved(parseFloat(dairyInput))
-      if (d2oInput) setD2oSaved(parseFloat(d2oInput))
+      setDairySaved(dairyAmount)
+      setD2oSaved(d2oAmount)
       setSaveSuccess(true)
       setTodayInput('')
       setDairyInput('')
@@ -119,11 +122,16 @@ export default function DailyMilkPage() {
     return Math.round(normalL * dairyPrice + overL * (dairyPrice - dairyOverPrice))
   }
 
-  // 계산
+  // 입력 중 자동 계산: 총 착유량 - D2O = 진흥회
+  const inputTotal = parseFloat(todayInput) || todaySaved || 0
+  const inputD2o = parseFloat(d2oInput) || 0
+  const autoDairyL = inputTotal > 0 && inputD2o > 0 ? Math.max(0, inputTotal - inputD2o) : 0
+
+  // 저장된 데이터 기반 계산
   const totalMilk = todaySaved || 0
   const loss = totalMilk * LOSS_RATE
-  const dairyDelivery = dairySaved || 0
   const d2oDelivery = d2oSaved || 0
+  const dairyDelivery = dairySaved || Math.max(0, totalMilk - d2oDelivery)
   const totalDelivery = dairyDelivery + d2oDelivery
 
   // 어제 대비
@@ -182,19 +190,6 @@ export default function DailyMilkPage() {
               </div>
             </div>
 
-            {/* 진흥회 납유량 */}
-            <div>
-              <p className="text-xs font-medium text-green-600 mb-1">🏛️ 진흥회 납유 (L)</p>
-              <div className="flex gap-2 items-center">
-                <Input type="number" step="0.1"
-                  placeholder={dairySaved ? `${dairySaved}L` : '진흥회'}
-                  className="text-xl h-12 font-bold text-center border-green-300"
-                  value={dairyInput}
-                  onChange={(e) => setDairyInput(e.target.value)} />
-                <span className="text-lg font-bold text-green-400">L</span>
-              </div>
-            </div>
-
             {/* D2O 납유량 */}
             <div>
               <p className="text-xs font-medium text-blue-600 mb-1">🏭 D2O 납유 (L)</p>
@@ -206,6 +201,18 @@ export default function DailyMilkPage() {
                   onChange={(e) => setD2oInput(e.target.value)} />
                 <span className="text-lg font-bold text-blue-400">L</span>
               </div>
+            </div>
+
+            {/* 진흥회 납유량 — 자동 계산 */}
+            <div>
+              <p className="text-xs font-medium text-green-600 mb-1">🏛️ 진흥회 (자동계산)</p>
+              <div className="flex gap-2 items-center">
+                <div className="text-xl h-12 font-bold text-center border border-green-200 bg-green-50 rounded-md flex items-center justify-center w-full">
+                  {autoDairyL > 0 ? `${autoDairyL.toFixed(1)}` : '-'}
+                </div>
+                <span className="text-lg font-bold text-green-400">L</span>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-0.5">착유량 - D2O = 진흥회</p>
             </div>
           </div>
 
