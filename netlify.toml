@@ -9,7 +9,7 @@
 # SPA 라우팅 — 모든 경로를 index.html로
 [[redirects]]
   from = "/api/*"
-  to = "https://heyhay-erp-production.up.railway.app/api/:splat"
+  to = "https://heyhay-production.up.railway.app/api/:splat"
   status = 200
   force = true
 
@@ -21,4 +21,4 @@
 # 환경변수 (Netlify UI에서도 설정 가능)
 [build.environment]
   NODE_VERSION = "20"
-  VITE_API_URL = "https://heyhay-erp-production.up.railway.app"
+  VITE_API_URL = "https://heyhay-production.up.railway.app"
