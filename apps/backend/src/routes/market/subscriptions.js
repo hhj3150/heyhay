@@ -148,4 +148,15 @@ router.put('/:id', async (req, res, next) => {
   }
 })
 
+/** POST /batch-payment — 구독 결제 배치 실행 (ADMIN 전용) */
+router.post('/batch-payment', async (req, res, next) => {
+  try {
+    const { runPaymentBatch } = require('../../services/subscriptionPayment')
+    const result = await runPaymentBatch()
+    res.json(apiResponse(result))
+  } catch (err) {
+    next(err)
+  }
+})
+
 module.exports = router
