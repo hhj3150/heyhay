@@ -1,0 +1,21 @@
+{
+  "name": "heyhay-milk-erp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "HEY HAY MILK 통합 ERP - Farm-to-Consumer 경영 플랫폼",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "npm run dev --workspace=apps/backend",
+    "dev:frontend": "npm run dev --workspace=apps/frontend",
+    "build": "npm run build --workspace=apps/frontend",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  # PostgreSQL + TimescaleDB
+  db:
+    image: timescale/timescaledb:latest-pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: heyhay_erp
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-heyhay2025!}
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./apps/backend/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: heyhay_erp
+      DB_USER: postgres
+      DB_PASSWORD: ${DB_PASSWORD:-heyhay2025!}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+    ports:
+      - '3001:3001'
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # Nginx (프론트엔드 정적 파일 + API 리버스 프록시)
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./apps/frontend/dist:/usr/share/nginx/html
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
+  redisdata:

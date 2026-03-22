@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+@theme {
+  /* HEY HAY MILK 브랜드 컬러 */
+  --color-brand-50: #fefce8;
+  --color-brand-100: #fef9c3;
+  --color-brand-200: #fef08a;
+  --color-brand-300: #fde047;
+  --color-brand-400: #facc15;
+  --color-brand-500: #eab308;
+  --color-brand-600: #ca8a04;
+  --color-brand-700: #a16207;
+  --color-brand-800: #854d0e;
+  --color-brand-900: #713f12;
+
+  --color-farm: #f59e0b;
+  --color-factory: #3b82f6;
+  --color-market: #10b981;
+  --color-cafe: #8b5cf6;
+
+  --font-sans: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
+}
+
+body {
+  @apply bg-slate-50 text-slate-800 antialiased;
+}
