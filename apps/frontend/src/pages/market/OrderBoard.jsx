@@ -32,6 +32,7 @@ const CHANNEL_BADGE = {
   KAKAO: { label: '카톡주문', color: 'bg-yellow-100 text-yellow-700' },
   VISIT: { label: '방문주문', color: 'bg-pink-100 text-pink-700' },
   FACTORY_DIRECT: { label: '공장직판', color: 'bg-cyan-100 text-cyan-700' },
+  SAMPLE: { label: '무료샘플', color: 'bg-rose-100 text-rose-700' },
   OFFLINE: { label: '오프라인', color: 'bg-purple-100 text-purple-700' },
 }
 
@@ -113,12 +114,13 @@ export default function OrderBoard() {
     if (res.success) {
       const orderId = res.data?.id
       if (orderId) {
-        if (o.channel === 'FACTORY_DIRECT') {
-          // 공장직판: 결제완료 → 배송완료 한 번에
+        if (o.channel === 'FACTORY_DIRECT' || o.channel === 'SAMPLE') {
+          // 공장직판/무료샘플: 즉시 배송완료 처리
+          const label = o.channel === 'SAMPLE' ? '무료샘플' : '현장수령'
           await apiPut(`/market/orders/${orderId}`, { status: 'PAID' })
           await apiPut(`/market/orders/${orderId}`, { status: 'PROCESSING' })
           await apiPut(`/market/orders/${orderId}`, { status: 'PACKED' })
-          await apiPut(`/market/orders/${orderId}`, { status: 'SHIPPED', courier: '현장수령', tracking_number: '직접수령' })
+          await apiPut(`/market/orders/${orderId}`, { status: 'SHIPPED', courier: label, tracking_number: label })
           await apiPut(`/market/orders/${orderId}`, { status: 'DELIVERED' })
         } else if (o.paid) {
           // 결제 완료 체크됐으면 PAID로
@@ -365,6 +367,7 @@ export default function OrderBoard() {
                 <div className="flex gap-2 flex-wrap">
                   {[
                     { value: 'FACTORY_DIRECT', label: '🏭 공장직판', color: 'bg-cyan-100 text-cyan-700 border-cyan-300' },
+                    { value: 'SAMPLE', label: '🎁 무료샘플', color: 'bg-rose-100 text-rose-700 border-rose-300' },
                     { value: 'PHONE', label: '📞 전화', color: 'bg-orange-100 text-orange-700 border-orange-300' },
                     { value: 'KAKAO', label: '💬 카톡', color: 'bg-yellow-100 text-yellow-700 border-yellow-300' },
                     { value: 'VISIT', label: '🏠 방문', color: 'bg-pink-100 text-pink-700 border-pink-300' },
@@ -398,7 +401,14 @@ export default function OrderBoard() {
               {/* 공장직판 안내 */}
               {newOrder.channel === 'FACTORY_DIRECT' && (
                 <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-3 text-sm text-cyan-700">
-                  🏭 현장 판매 — 결제 완료 후 바로 <strong>배송완료</strong> 처리됩니다
+                  🏭 현장 판매 — 등록 즉시 <strong>배송완료</strong> 처리됩니다
+                </div>
+              )}
+
+              {/* 무료샘플 안내 */}
+              {newOrder.channel === 'SAMPLE' && (
+                <div className="bg-rose-50 border border-rose-200 rounded-lg p-3 text-sm text-rose-700">
+                  🎁 무료 샘플 — 단가 0원 자동 적용, 재고에서 차감됩니다
                 </div>
               )}
 
@@ -429,7 +439,7 @@ export default function OrderBoard() {
                           onChange={(e) => {
                             const sku = skuList.find((s) => s.id === e.target.value)
                             updateNewOrderItem(idx, 'sku_id', e.target.value)
-                            if (sku) updateNewOrderItem(idx, 'unit_price', sku.default_price || 0)
+                            if (sku) updateNewOrderItem(idx, 'unit_price', newOrder.channel === 'SAMPLE' ? 0 : (sku.default_price || 0))
                           }}>
                           <option value="">제품 선택</option>
                           {skuList.map((s) => (
