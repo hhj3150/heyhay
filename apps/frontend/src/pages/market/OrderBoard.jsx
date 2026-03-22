@@ -372,7 +372,6 @@ export default function OrderBoard() {
                     { value: 'KAKAO', label: '💬 카톡', color: 'bg-yellow-100 text-yellow-700 border-yellow-300' },
                     { value: 'VISIT', label: '🏠 방문', color: 'bg-pink-100 text-pink-700 border-pink-300' },
                     { value: 'B2B', label: '🏢 B2B', color: 'bg-slate-100 text-slate-700 border-slate-300' },
-                    { value: 'OWN_MALL', label: '🌐 자사몰', color: 'bg-blue-100 text-blue-700 border-blue-300' },
                   ].map((ch) => (
                     <button key={ch.value}
                       onClick={() => setNewOrder((o) => ({ ...o, channel: ch.value }))}
