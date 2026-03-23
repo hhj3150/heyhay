@@ -3,6 +3,13 @@
  * ISO 날짜를 한국어 친화적으로 표시
  */
 
+/** KST 기준 오늘 날짜 (YYYY-MM-DD) */
+export const getKSTToday = () => {
+  const now = new Date()
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000)
+  return kst.toISOString().split('T')[0]
+}
+
 /** ISO 날짜 → '2026년 3월 24일' */
 export const formatDate = (isoString) => {
   if (!isoString) return '-'

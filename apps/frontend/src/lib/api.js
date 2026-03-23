@@ -23,6 +23,21 @@ const clearTokens = () => {
 }
 
 /**
+ * JWT 토큰 만료 체크 (base64 디코딩만, 검증은 서버에서)
+ * @param {string} token
+ * @returns {boolean}
+ */
+const isTokenExpired = (token) => {
+  if (!token) return true
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return payload.exp * 1000 < Date.now()
+  } catch {
+    return true
+  }
+}
+
+/**
  * 토큰 갱신 시도
  * @returns {Promise<string|null>} 새 access token 또는 null
  */
@@ -62,7 +77,17 @@ const refreshAccessToken = async () => {
  */
 export const api = async (endpoint, options = {}) => {
   const url = `${BASE_URL}${endpoint}`
-  const token = getAccessToken()
+  let token = getAccessToken()
+
+  // 토큰 만료 시 자동 갱신 시도
+  if (token && isTokenExpired(token)) {
+    token = await refreshAccessToken()
+    if (!token) {
+      clearTokens()
+      window.location.href = '/login'
+      return { success: false, error: { code: 'AUTH_EXPIRED', message: '세션이 만료되었습니다' } }
+    }
+  }
 
   const headers = {
     'Content-Type': 'application/json',
@@ -108,3 +133,22 @@ export const apiDelete = (endpoint) =>
   api(endpoint, { method: 'DELETE' })
 
 export { setTokens, clearTokens, getAccessToken }
+
+/** 비활성 30분 시 자동 로그아웃 */
+let inactivityTimer = null
+const INACTIVITY_TIMEOUT = 30 * 60 * 1000
+
+const resetInactivityTimer = () => {
+  clearTimeout(inactivityTimer)
+  inactivityTimer = setTimeout(() => {
+    clearTokens()
+    window.location.href = '/login'
+  }, INACTIVITY_TIMEOUT)
+}
+
+if (typeof window !== 'undefined') {
+  ['mousedown', 'keydown', 'scroll', 'touchstart'].forEach((event) => {
+    window.addEventListener(event, resetInactivityTimer, { passive: true })
+  })
+  resetInactivityTimer()
+}

@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { apiGet, apiPost } from '@/lib/api'
+import { getKSTToday } from '@/lib/date'
 import {
   Factory, Droplets, Thermometer, Package, AlertTriangle, Plus, X,
   CheckCircle2, XCircle,
@@ -41,13 +42,13 @@ export default function FactoryDashboard() {
 
   // 원유 입고 폼
   const [rawForm, setRawForm] = useState({
-    received_date: new Date().toISOString().split('T')[0],
+    received_date: getKSTToday(),
     amount_l: '', fat_pct: '', protein_pct: '', scc: '',
   })
 
   // 생산 배치 폼
   const [batchForm, setBatchForm] = useState({
-    sku_id: '', produced_at: new Date().toISOString().split('T')[0],
+    sku_id: '', produced_at: getKSTToday(),
     quantity: '', raw_milk_used_l: '',
     material_cost: '', labor_cost: '', overhead_cost: '',
   })
@@ -182,7 +183,7 @@ export default function FactoryDashboard() {
               <span className="text-xs text-slate-500">오늘 생산</span>
             </div>
             <p className="text-2xl font-bold">
-              {batches.filter((b) => b.produced_at?.startsWith(new Date().toISOString().split('T')[0])).length}배치
+              {batches.filter((b) => b.produced_at?.startsWith(getKSTToday())).length}배치
             </p>
           </CardContent>
         </Card>
