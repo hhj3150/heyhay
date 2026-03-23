@@ -17,6 +17,17 @@ const { apiResponse, apiError } = require('../../lib/shared')
 
 const router = express.Router()
 
+/** UUID 형식 검증 정규식 */
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/** :id 파라미터 UUID 검증 미들웨어 */
+const validateUUID = (req, res, next) => {
+  if (req.params.id && !UUID_REGEX.test(req.params.id)) {
+    return res.status(400).json(apiError('INVALID_UUID', '유효하지 않은 ID 형식입니다'))
+  }
+  next()
+}
+
 const partnerSchema = z.object({
   name: z.string().min(1),
   contact_name: z.string().optional(),
@@ -92,7 +103,7 @@ router.get('/', async (req, res, next) => {
 })
 
 /** GET /:id — 거래처 상세 + 정기주문 */
-router.get('/:id', async (req, res, next) => {
+router.get('/:id', validateUUID, async (req, res, next) => {
   try {
     const [partnerRes, ordersRes, shipmentsRes] = await Promise.all([
       query('SELECT * FROM b2b_partners WHERE id = $1 AND deleted_at IS NULL', [req.params.id]),
@@ -146,7 +157,7 @@ router.post('/', validate(partnerSchema), async (req, res, next) => {
 })
 
 /** PUT /:id — 거래처 수정 */
-router.put('/:id', validate(partnerSchema.partial()), async (req, res, next) => {
+router.put('/:id', validateUUID, validate(partnerSchema.partial()), async (req, res, next) => {
   try {
     const fields = req.body
     const keys = Object.keys(fields)
@@ -166,7 +177,7 @@ router.put('/:id', validate(partnerSchema.partial()), async (req, res, next) => 
 })
 
 /** POST /:id/orders — 정기 주문 일괄 설정 (기존 비활성화 → 새로 삽입) */
-router.post('/:id/orders', validate(standingOrderSchema), async (req, res, next) => {
+router.post('/:id/orders', validateUUID, validate(standingOrderSchema), async (req, res, next) => {
   try {
     const partnerId = req.params.id
     const { items } = req.body
@@ -201,7 +212,7 @@ router.post('/:id/orders', validate(standingOrderSchema), async (req, res, next)
 })
 
 /** POST /:id/ship — 출하 처리 (정기주문 기반 자동 or 수동) */
-router.post('/:id/ship', async (req, res, next) => {
+router.post('/:id/ship', validateUUID, async (req, res, next) => {
   try {
     const partnerId = req.params.id
     const { items, notes } = req.body || {}

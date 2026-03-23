@@ -118,6 +118,10 @@ DECLARE
   v_order_id UUID;
   v_order_num TEXT;
   v_idx INT := 1;
+  v_subtotal INT;
+  v_total INT;
+  v_created TIMESTAMPTZ;
+  v_date_str TEXT;
   v_statuses TEXT[] := ARRAY['PENDING','PAID','PROCESSING','PACKED','SHIPPED','DELIVERED','DELIVERED','DELIVERED'];
   v_couriers TEXT[] := ARRAY['CJ대한통운','롯데택배','한진택배','우체국','로젠택배'];
 BEGIN
@@ -136,7 +140,18 @@ BEGIN
     -- 각 고객당 1~3건 주문
     FOR i IN 1..LEAST(3, GREATEST(1, (v_idx % 3) + 1))
     LOOP
-      v_order_num := 'HH-20260320-' || LPAD(v_idx::TEXT, 4, '0');
+      -- 주문 생성 시점 계산
+      v_created := NOW() - ((50 - v_idx) || ' hours')::INTERVAL;
+      v_date_str := TO_CHAR(v_created, 'YYYYMMDD');
+      v_order_num := 'HH-' || v_date_str || '-' || LPAD(v_idx::TEXT, 4, '0');
+
+      -- 아이템 기반 금액 계산: 짝수 idx → 2종(A2-750 + YG-180×2), 홀수 → 1종(A2-750)
+      IF v_idx % 2 = 0 THEN
+        v_subtotal := 9000 + 7000;  -- A2-750 ×1 + YG-180 ×2
+      ELSE
+        v_subtotal := 9000;          -- A2-750 ×1
+      END IF;
+      v_total := v_subtotal + 3000;  -- + shipping_fee
 
       INSERT INTO orders (
         order_number, customer_id, channel, status,
@@ -150,7 +165,7 @@ BEGIN
         v_cust.id,
         CASE WHEN v_cust.channel = 'CAFE' THEN 'OWN_MALL' ELSE v_cust.channel END,
         v_statuses[1 + (v_idx % 8)],
-        16000, 3000, 0, 19000,
+        v_subtotal, 3000, 0, v_total,
         v_cust.name,
         v_cust.phone,
         v_cust.address_zip,
@@ -165,10 +180,10 @@ BEGIN
         CASE WHEN v_idx % 3 = 0 THEN 2 ELSE 1 END,
         CASE WHEN v_statuses[1 + (v_idx % 8)] IN ('SHIPPED','DELIVERED') THEN v_couriers[1 + (v_idx % 5)] ELSE NULL END,
         CASE WHEN v_statuses[1 + (v_idx % 8)] IN ('SHIPPED','DELIVERED') THEN '6000' || LPAD(v_idx::TEXT, 8, '0') ELSE NULL END,
-        NOW() - ((50 - v_idx) || ' hours')::INTERVAL,
-        CASE WHEN v_statuses[1 + (v_idx % 8)] NOT IN ('PENDING') THEN NOW() - ((49 - v_idx) || ' hours')::INTERVAL ELSE NULL END,
-        CASE WHEN v_statuses[1 + (v_idx % 8)] IN ('SHIPPED','DELIVERED') THEN NOW() - ((40 - v_idx) || ' hours')::INTERVAL ELSE NULL END,
-        CASE WHEN v_statuses[1 + (v_idx % 8)] = 'DELIVERED' THEN NOW() - ((30 - v_idx) || ' hours')::INTERVAL ELSE NULL END
+        v_created,
+        CASE WHEN v_statuses[1 + (v_idx % 8)] NOT IN ('PENDING') THEN v_created + INTERVAL '1 hour' ELSE NULL END,
+        CASE WHEN v_statuses[1 + (v_idx % 8)] IN ('SHIPPED','DELIVERED') THEN v_created + INTERVAL '10 hours' ELSE NULL END,
+        CASE WHEN v_statuses[1 + (v_idx % 8)] = 'DELIVERED' THEN v_created + INTERVAL '20 hours' ELSE NULL END
       )
       RETURNING id INTO v_order_id;
 

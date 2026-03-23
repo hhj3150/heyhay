@@ -9,13 +9,14 @@ import {
   LogOut, ChevronLeft, ChevronRight, Baby, Heart, Wheat,
   Package, CreditCard, BarChart3, Users, Calendar, Menu, X,
   Monitor, DollarSign, ClipboardList, Gauge, Building2, ClipboardCheck,
+  Settings, Cog, Boxes,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import useAuthStore from '@/stores/authStore'
 import { cn } from '@/lib/utils'
 
 const ROLE_PERMISSIONS = {
-  ADMIN: ['dashboard', 'farm', 'factory', 'market', 'cafe'],
+  ADMIN: ['dashboard', 'farm', 'factory', 'market', 'cafe', 'settings'],
   FACTORY: ['dashboard', 'factory'],
   CAFE: ['dashboard', 'cafe'],
   FARM: ['dashboard', 'farm'],
@@ -29,6 +30,7 @@ const NAV_ITEMS = [
   { id: 'factory', label: '공장 관리', icon: Factory, path: '/factory', color: 'text-blue-500', children: [
     { label: '생산 계획', icon: ClipboardList, path: '/factory/plan' },
     { label: '공정 현황', icon: Gauge, path: '/factory/dashboard' },
+    { label: '자재 관리', icon: Boxes, path: '/factory/packaging' },
   ]},
   { id: 'market', label: '온라인 마켓', icon: ShoppingCart, path: '/market', color: 'text-emerald-500', children: [
     { label: '주문 관리', icon: Package, path: '/market/orders' },
@@ -42,6 +44,10 @@ const NAV_ITEMS = [
   { id: 'cafe', label: '밀크카페', icon: Coffee, path: '/cafe', color: 'text-violet-500', children: [
     { label: 'POS 판매', icon: Monitor, path: '/cafe/pos' },
     { label: '매출·정산', icon: DollarSign, path: '/cafe/dashboard' },
+  ]},
+  { id: 'settings', label: '설정', icon: Settings, path: '/settings', color: 'text-slate-500', children: [
+    { label: '제품 단가', icon: DollarSign, path: '/settings/prices' },
+    { label: '시스템 설정', icon: Cog, path: '/settings/system' },
   ]},
 ]
 

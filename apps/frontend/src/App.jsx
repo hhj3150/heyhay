@@ -13,6 +13,7 @@ const FarmRoutes = lazy(() => import('@/pages/farm/FarmRoutes'))
 const FactoryRoutes = lazy(() => import('@/pages/factory/FactoryRoutes'))
 const MarketRoutes = lazy(() => import('@/pages/market/MarketRoutes'))
 const CafeRoutes = lazy(() => import('@/pages/cafe/CafeRoutes'))
+const SettingsRoutes = lazy(() => import('@/pages/settings/SettingsRoutes'))
 
 export default function App() {
   return (
@@ -27,6 +28,7 @@ export default function App() {
               <Route path="factory/*" element={<ErrorBoundary><FactoryRoutes /></ErrorBoundary>} />
               <Route path="market/*" element={<ErrorBoundary><MarketRoutes /></ErrorBoundary>} />
               <Route path="cafe/*" element={<ErrorBoundary><CafeRoutes /></ErrorBoundary>} />
+              <Route path="settings/*" element={<ErrorBoundary><SettingsRoutes /></ErrorBoundary>} />
             </Route>
           </Routes>
         </Suspense>

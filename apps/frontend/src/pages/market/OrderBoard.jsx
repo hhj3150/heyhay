@@ -296,6 +296,13 @@ export default function OrderBoard() {
                       )}
                     </div>
 
+                    {/* 상품 내역 */}
+                    {order.items && order.items.length > 0 && (
+                      <p className="text-[10px] text-slate-500 mb-2 truncate">
+                        {order.items.map((item) => `${item.sku_code} ×${item.quantity}`).join(', ')}
+                      </p>
+                    )}
+
                     {/* 배송 주소 (요약) */}
                     {order.shipping_address && (
                       <div className="flex items-start gap-1 text-[10px] text-slate-400 mb-2">

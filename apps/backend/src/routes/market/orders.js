@@ -148,13 +148,36 @@ router.get('/', async (req, res, next) => {
       LIMIT $${limitIdx} OFFSET $${offsetIdx}
     `, [...params, parseInt(limit), offset])
 
+    // 주문 아이템을 한 번에 조회 (N+1 방지)
+    const orderIds = result.rows.map((r) => r.id)
+    let itemsMap = {}
+    if (orderIds.length > 0) {
+      const itemsRes = await query(`
+        SELECT oi.order_id, oi.quantity, oi.unit_price, oi.subtotal,
+               s.code AS sku_code, s.name AS sku_name
+        FROM order_items oi
+        JOIN skus s ON oi.sku_id = s.id
+        WHERE oi.order_id = ANY($1)
+        ORDER BY oi.created_at
+      `, [orderIds])
+      itemsRes.rows.forEach((item) => {
+        if (!itemsMap[item.order_id]) itemsMap[item.order_id] = []
+        itemsMap[item.order_id].push(item)
+      })
+    }
+
+    const ordersWithItems = result.rows.map((order) => ({
+      ...order,
+      items: itemsMap[order.id] || [],
+    }))
+
     const countResult = await query(
       `SELECT COUNT(*) FROM orders o WHERE ${where}`,
       params,
     )
     const total = parseInt(countResult.rows[0].count)
 
-    res.json(apiResponse(result.rows, {
+    res.json(apiResponse(ordersWithItems, {
       page: parseInt(page),
       limit: parseInt(limit),
       total,
