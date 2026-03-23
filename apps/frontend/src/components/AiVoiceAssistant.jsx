@@ -9,12 +9,12 @@ import { Mic, MicOff, X, Volume2, Loader2, MessageCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const SUGGESTIONS = [
-  '오늘 납유량은?',
-  '오늘 생산 계획 알려줘',
-  '배송 현황은?',
-  '구독자 몇 명이야?',
-  '미처리 주문 있어?',
   '오늘 전체 현황 요약해줘',
+  '오늘 납유량은?',
+  '미처리 주문 있어?',
+  '밀크카페 우유750 10개 주문해줘',
+  '이번달 납유대금은?',
+  '구독자 몇 명이야?',
 ]
 
 export default function AiVoiceAssistant() {
@@ -24,6 +24,7 @@ export default function AiVoiceAssistant() {
   const [isLoading, setIsLoading] = useState(false)
   const [transcript, setTranscript] = useState('')
   const [messages, setMessages] = useState([])
+  const [pendingOrder, setPendingOrder] = useState(null) // 주문 대기 데이터
   const recognitionRef = useRef(null)
   const messagesEndRef = useRef(null)
 
@@ -90,6 +91,38 @@ export default function AiVoiceAssistant() {
     if (!text.trim()) return
     setTranscript('')
 
+    // "주문해", "확인", "넣어" → 대기 중인 주문 실행
+    const confirmWords = ['주문해', '확인', '넣어', '등록해', '네', '응']
+    if (pendingOrder && confirmWords.some((w) => text.includes(w))) {
+      const newMessages = [...messages, { role: 'user', content: text }]
+      setMessages(newMessages)
+      setIsLoading(true)
+
+      try {
+        const res = await apiPost('/dashboard/ai-chat', { confirm_order: pendingOrder })
+        if (res.success) {
+          const answer = res.data.answer
+          setMessages([...newMessages, { role: 'assistant', content: answer }])
+          if (hasTTS) speak(answer)
+        }
+      } catch {
+        setMessages([...newMessages, { role: 'assistant', content: '주문 처리 중 오류가 발생했습니다.' }])
+      }
+
+      setPendingOrder(null)
+      setIsLoading(false)
+      return
+    }
+
+    // "취소" → 주문 취소
+    if (pendingOrder && (text.includes('취소') || text.includes('아니'))) {
+      const newMessages = [...messages, { role: 'user', content: text }]
+      setMessages([...newMessages, { role: 'assistant', content: '주문을 취소했습니다.' }])
+      setPendingOrder(null)
+      if (hasTTS) speak('주문을 취소했습니다.')
+      return
+    }
+
     const newMessages = [...messages, { role: 'user', content: text }]
     setMessages(newMessages)
     setIsLoading(true)
@@ -99,12 +132,16 @@ export default function AiVoiceAssistant() {
 
       if (res.success) {
         const answer = res.data.answer
-        setMessages([...newMessages, { role: 'assistant', content: answer }])
 
-        // TTS 음성 출력
-        if (hasTTS) {
-          speak(answer)
+        // 주문 데이터가 있으면 대기 상태로
+        if (res.data.order_data) {
+          setPendingOrder(res.data.order_data)
+          setMessages([...newMessages, { role: 'assistant', content: answer + '\n\n"주문해" 또는 "취소"라고 말씀해주세요.' }])
+        } else {
+          setMessages([...newMessages, { role: 'assistant', content: answer }])
         }
+
+        if (hasTTS) speak(answer)
       } else {
         setMessages([...newMessages, { role: 'assistant', content: '죄송합니다, 응답을 생성할 수 없습니다.' }])
       }
