@@ -96,7 +96,7 @@ router.post('/ai-chat', async (req, res, next) => {
     const { message } = req.body
     if (!message) return res.status(400).json(apiError('NO_MESSAGE', '질문을 입력하세요'))
 
-    const apiKey = process.env.CLAUDE_API_KEY
+    const apiKey = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.Claude_API_Key || process.env.claude_api_key
     if (!apiKey) {
       // API 키 없으면 로컬 응답 생성
       const context = await gatherContext()
