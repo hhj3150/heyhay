@@ -210,12 +210,13 @@ export default function OrderBoard() {
               className="pl-9 w-full sm:w-64"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              aria-label="주문 검색"
             />
           </div>
           <Button onClick={() => setNewOrderModal(true)} className="bg-emerald-500 hover:bg-emerald-600 shrink-0">
             <Plus className="w-4 h-4" /> 주문등록
           </Button>
-          <Button variant="outline" onClick={fetchOrders} disabled={loading}>
+          <Button variant="outline" onClick={fetchOrders} disabled={loading} aria-label="주문 목록 새로고침">
             <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
           </Button>
         </div>

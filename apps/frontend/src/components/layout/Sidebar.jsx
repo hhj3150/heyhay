@@ -72,13 +72,13 @@ export default function Sidebar() {
           )}
         </div>
         {/* 모바일 닫기 버튼 */}
-        <button onClick={() => setMobileOpen(false)} className="lg:hidden p-1 text-slate-400 hover:text-slate-600">
+        <button onClick={() => setMobileOpen(false)} className="lg:hidden p-1 text-slate-400 hover:text-slate-600" aria-label="메뉴 닫기">
           <X className="w-5 h-5" />
         </button>
       </div>
 
       {/* 메뉴 */}
-      <nav className="flex-1 py-4 space-y-1 px-2 overflow-y-auto">
+      <nav className="flex-1 py-4 space-y-1 px-2 overflow-y-auto" aria-label="메인 네비게이션">
         {visibleItems.map(({ id, label, icon: Icon, path, color, children }) => (
           <div key={id}>
             <NavLink
@@ -133,6 +133,7 @@ export default function Sidebar() {
           <button
             onClick={logout}
             className="flex items-center gap-2 px-2 py-1.5 text-xs text-slate-400 hover:text-red-500 transition-colors"
+            aria-label="로그아웃"
           >
             <LogOut className="w-4 h-4" />
             {(!collapsed || mobileOpen) && '로그아웃'}
@@ -141,6 +142,7 @@ export default function Sidebar() {
           <button
             onClick={() => setCollapsed((prev) => !prev)}
             className="hidden lg:block p-1 text-slate-300 hover:text-slate-500"
+            aria-label={collapsed ? '사이드바 펼치기' : '사이드바 접기'}
           >
             {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </button>
@@ -155,6 +157,7 @@ export default function Sidebar() {
       <button
         onClick={() => setMobileOpen(true)}
         className="lg:hidden fixed top-3 left-3 z-50 w-10 h-10 bg-white border border-slate-200 rounded-lg flex items-center justify-center shadow-sm"
+        aria-label="메뉴 열기"
       >
         <Menu className="w-5 h-5 text-slate-600" />
       </button>

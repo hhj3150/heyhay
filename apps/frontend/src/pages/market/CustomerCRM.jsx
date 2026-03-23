@@ -56,6 +56,7 @@ export default function CustomerCRM() {
   const [selected, setSelected] = useState(null)
   const [detail, setDetail] = useState({ orders: [], subscriptions: [] })
   const [meta, setMeta] = useState({ total: 0, page: 1, totalPages: 1 })
+  const [showAllOrders, setShowAllOrders] = useState(false)
 
   const fetchCustomers = useCallback(async () => {
     const params = new URLSearchParams({ limit: '50' })
@@ -79,8 +80,9 @@ export default function CustomerCRM() {
   // 고객 상세 로드
   const loadDetail = async (customer) => {
     setSelected(customer)
+    setShowAllOrders(false)
     const [ordRes, subRes] = await Promise.all([
-      apiGet(`/market/orders?customer_id=${customer.id}&limit=20`),
+      apiGet(`/market/orders?customer_id=${customer.id}&limit=100`),
       apiGet(`/market/subscriptions?customer_id=${customer.id}&limit=10`),
     ])
     setDetail({
@@ -307,7 +309,7 @@ export default function CustomerCRM() {
                 <div className="absolute left-4 top-6 bottom-6 w-px bg-slate-200" />
 
                 <div className="space-y-3">
-                  {detail.orders.map((o, idx) => (
+                  {(showAllOrders ? detail.orders : detail.orders.slice(0, 5)).map((o, idx) => (
                     <div key={o.id} className="flex gap-3 relative">
                       {/* 타임라인 점 */}
                       <div className={cn('w-8 h-8 rounded-full flex items-center justify-center shrink-0 z-10 border-2 border-white',
@@ -347,6 +349,12 @@ export default function CustomerCRM() {
                     </div>
                   ))}
                 </div>
+
+                {detail.orders.length > 5 && !showAllOrders && (
+                  <button onClick={() => setShowAllOrders(true)} className="w-full text-center py-2 text-sm text-blue-500 hover:text-blue-700 font-medium">
+                    전체 {detail.orders.length}건 보기
+                  </button>
+                )}
               </div>
             ) : (
               <p className="text-center text-slate-400 py-6 text-sm">주문 이력 없음</p>

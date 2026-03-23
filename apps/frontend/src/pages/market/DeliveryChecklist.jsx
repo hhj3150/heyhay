@@ -48,7 +48,22 @@ export default function DeliveryChecklist() {
       apiGet(`/market/checklist?date=${dateStr}${statusParam}`),
       apiGet(`/market/checklist/stats?date=${dateStr}`),
     ])
-    if (itemsRes.success) setItems(itemsRes.data)
+    if (itemsRes.success) {
+      if (itemsRes.data.length === 0) {
+        // 체크리스트가 비어있으면 자동 생성 시도
+        const genRes = await apiPost('/market/checklist/generate', { date: dateStr })
+        if (genRes.success) {
+          const [reItemsRes, reStatsRes] = await Promise.all([
+            apiGet(`/market/checklist?date=${dateStr}${statusParam}`),
+            apiGet(`/market/checklist/stats?date=${dateStr}`),
+          ])
+          if (reItemsRes.success) setItems(reItemsRes.data)
+          if (reStatsRes.success) setStats(reStatsRes.data)
+          return
+        }
+      }
+      setItems(itemsRes.data)
+    }
     if (statsRes.success) setStats(statsRes.data)
   }, [dateStr, filter])
 

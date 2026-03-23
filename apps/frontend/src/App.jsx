@@ -1,30 +1,35 @@
 /**
- * @fileoverview 메인 앱 라우터 + 에러 바운더리
+ * @fileoverview 메인 앱 라우터 + 에러 바운더리 + 코드 스플리팅
  */
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { lazy, Suspense } from 'react'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import AppLayout from '@/components/layout/AppLayout'
-import LoginPage from '@/pages/LoginPage'
-import DashboardPage from '@/pages/DashboardPage'
-import FarmRoutes from '@/pages/farm/FarmRoutes'
-import FactoryRoutes from '@/pages/factory/FactoryRoutes'
-import MarketRoutes from '@/pages/market/MarketRoutes'
-import CafeRoutes from '@/pages/cafe/CafeRoutes'
+import LoadingScreen from '@/components/ui/LoadingScreen'
+
+const LoginPage = lazy(() => import('@/pages/LoginPage'))
+const DashboardPage = lazy(() => import('@/pages/DashboardPage'))
+const FarmRoutes = lazy(() => import('@/pages/farm/FarmRoutes'))
+const FactoryRoutes = lazy(() => import('@/pages/factory/FactoryRoutes'))
+const MarketRoutes = lazy(() => import('@/pages/market/MarketRoutes'))
+const CafeRoutes = lazy(() => import('@/pages/cafe/CafeRoutes'))
 
 export default function App() {
   return (
     <ErrorBoundary>
       <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/" element={<AppLayout />}>
-            <Route index element={<ErrorBoundary><DashboardPage /></ErrorBoundary>} />
-            <Route path="farm/*" element={<ErrorBoundary><FarmRoutes /></ErrorBoundary>} />
-            <Route path="factory/*" element={<ErrorBoundary><FactoryRoutes /></ErrorBoundary>} />
-            <Route path="market/*" element={<ErrorBoundary><MarketRoutes /></ErrorBoundary>} />
-            <Route path="cafe/*" element={<ErrorBoundary><CafeRoutes /></ErrorBoundary>} />
-          </Route>
-        </Routes>
+        <Suspense fallback={<LoadingScreen />}>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/" element={<AppLayout />}>
+              <Route index element={<ErrorBoundary><DashboardPage /></ErrorBoundary>} />
+              <Route path="farm/*" element={<ErrorBoundary><FarmRoutes /></ErrorBoundary>} />
+              <Route path="factory/*" element={<ErrorBoundary><FactoryRoutes /></ErrorBoundary>} />
+              <Route path="market/*" element={<ErrorBoundary><MarketRoutes /></ErrorBoundary>} />
+              <Route path="cafe/*" element={<ErrorBoundary><CafeRoutes /></ErrorBoundary>} />
+            </Route>
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     </ErrorBoundary>
   )

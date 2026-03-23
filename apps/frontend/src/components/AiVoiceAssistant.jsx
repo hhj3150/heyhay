@@ -564,7 +564,7 @@ export default function AiVoiceAssistant() {
           <button
             onClick={handleClose}
             className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
-            aria-label="닫기"
+            aria-label="AI 비서 닫기"
           >
             <X className="w-5 h-5" />
           </button>
@@ -637,7 +637,7 @@ export default function AiVoiceAssistant() {
                   ? 'bg-red-500 text-white shadow-lg scale-110 animate-pulse'
                   : 'bg-violet-100 text-violet-600 hover:bg-violet-200 active:scale-95',
               )}
-              aria-label={isListening ? '듣는 중' : '음성 입력'}
+              aria-label="음성으로 질문하기"
             >
               {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
             </button>

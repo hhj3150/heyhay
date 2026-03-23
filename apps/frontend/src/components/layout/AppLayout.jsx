@@ -23,12 +23,13 @@ export default function AppLayout() {
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto bg-slate-50 p-3 pt-14 lg:p-6 lg:pt-6">
+      <main className="flex-1 overflow-y-auto bg-slate-50 p-3 pt-14 lg:p-6 lg:pt-6" role="main">
         {!isHome && (
           <div className="flex items-center gap-2 mb-4">
             <button
               onClick={() => navigate(-1)}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-500 hover:text-slate-700 hover:bg-white rounded-lg transition-colors"
+              aria-label="뒤로 가기"
             >
               <ArrowLeft className="w-4 h-4" />
               뒤로
@@ -36,6 +37,7 @@ export default function AppLayout() {
             <button
               onClick={() => navigate('/')}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-400 hover:text-slate-600 hover:bg-white rounded-lg transition-colors"
+              aria-label="대시보드로 이동"
             >
               <Home className="w-4 h-4" />
               대시보드

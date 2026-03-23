@@ -136,16 +136,30 @@ router.get('/', async (req, res, next) => {
     const offset = (parseInt(page) - 1) * parseInt(limit)
     const where = conditions.join(' AND ')
 
+    const limitIdx = idx++
+    const offsetIdx = idx++
+
     const result = await query(`
       SELECT o.*, c.name AS customer_name
       FROM orders o
       LEFT JOIN customers c ON o.customer_id = c.id
       WHERE ${where}
       ORDER BY o.created_at DESC
-      LIMIT $${idx++} OFFSET $${idx++}
+      LIMIT $${limitIdx} OFFSET $${offsetIdx}
     `, [...params, parseInt(limit), offset])
 
-    res.json(apiResponse(result.rows))
+    const countResult = await query(
+      `SELECT COUNT(*) FROM orders o WHERE ${where}`,
+      params,
+    )
+    const total = parseInt(countResult.rows[0].count)
+
+    res.json(apiResponse(result.rows, {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      total,
+      totalPages: Math.ceil(total / parseInt(limit)),
+    }))
   } catch (err) {
     next(err)
   }
