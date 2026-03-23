@@ -87,6 +87,38 @@ const gatherContext = async () => {
     results.customers = customers.rows
   } catch { results.customers = [] }
 
+  // 오늘 착유량 (실제 기록)
+  try {
+    const milk = await query(`
+      SELECT date::text, total_l, COALESCE(dairy_assoc_l, 0) AS dairy_l, COALESCE(d2o_l, 0) AS d2o_l
+      FROM daily_milk_totals
+      WHERE date >= (NOW() AT TIME ZONE 'Asia/Seoul')::date - 1
+      ORDER BY date DESC LIMIT 2
+    `)
+    results.milking = milk.rows
+  } catch { results.milking = [] }
+
+  // 납유 단가
+  try {
+    const prices = await query(`SELECT key, value FROM settings WHERE key LIKE '%unit_price'`)
+    results.prices = {}
+    prices.rows.forEach((r) => { results.prices[r.key] = parseInt(r.value) })
+  } catch { results.prices = {} }
+
+  // 이번달 납유 정산
+  try {
+    const monthly = await query(`
+      SELECT
+        COALESCE(SUM(dairy_assoc_l), 0) AS month_dairy_l,
+        COALESCE(SUM(d2o_l), 0) AS month_d2o_l,
+        COUNT(*) FILTER (WHERE dairy_assoc_l > 0) AS dairy_days,
+        COUNT(*) FILTER (WHERE d2o_l > 0) AS d2o_days
+      FROM daily_milk_totals
+      WHERE date >= DATE_TRUNC('month', (NOW() AT TIME ZONE 'Asia/Seoul')::date)
+    `)
+    results.monthly_settlement = monthly.rows[0]
+  } catch { results.monthly_settlement = null }
+
   return results
 }
 
@@ -107,18 +139,26 @@ router.post('/ai-chat', async (req, res, next) => {
     // DB 컨텍스트 수집
     const context = await gatherContext()
 
-    const systemPrompt = `당신은 HEY HAY MILK ERP의 AI 비서입니다.
-송영신목장(A2 저지종, 일 착유 550L) → D2O 유가공 공장 → 온라인/B2B 판매 구조입니다.
-주문 생산 먼저, 남는 양만 낙농진흥회 납유합니다.
+    const systemPrompt = `당신은 HEY HAY MILK ERP의 AI 경영 비서입니다.
 
-현재 실시간 데이터:
+## 사업 구조
+- 송영신목장: A2 저지종 60두+, 일 착유 약 550L
+- 납유처 2곳: ①낙농진흥회(180L까지 정상유대, 초과분 -100원/L) ②D2O 농업회사법인(유가공)
+- D2O 공장: 주문량 기반 생산 → 남는 양만 진흥회 납유
+- 판매: 온라인(스마트스토어 예정) + B2B(밀크카페, 와인코리아) + 공장직판
+- SKU 6종: A2우유 750ml/180ml, 발효유 500ml/180ml, 소프트아이스크림, 카이막 100g
+- Loss율: 2%
+
+## 현재 실시간 데이터 (방금 DB에서 조회한 값)
 ${JSON.stringify(context, null, 2)}
 
-규칙:
-- 한국어로 간결하게 대답 (2-3문장)
-- 숫자는 정확히, 모르면 "확인이 필요합니다"
-- 원장님이 물어보는 것처럼 친근하게 대답
-- 음성으로 읽히므로 짧고 명확하게`
+## 규칙
+- 한국어로 간결하게 (3-4문장)
+- 숫자는 DB 데이터 기준으로 정확히
+- "milking" 데이터가 오늘 착유/납유 실제 기록임 — 이 값을 우선 사용
+- 금액 계산 시 prices의 단가 사용
+- 모르는 건 "확인이 필요합니다"
+- 원장님께 보고하듯 친근하고 명확하게`
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
