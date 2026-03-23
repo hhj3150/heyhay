@@ -3,29 +3,56 @@
  * 메뉴 터치 → 수량 조절 → 결제 → 자동 매출 기록
  * 큰 버튼 + 큰 글씨 → 현장 직원이 빠르게 사용
  */
-import { useState, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
-import { apiPost } from '@/lib/api'
+import { apiGet, apiPost } from '@/lib/api'
 import {
   Milk, IceCreamCone, Plus, Minus, Trash2, ShoppingCart,
   CreditCard, Banknote, CheckCircle2, X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-const MENU_ITEMS = [
-  { id: 'A2-750', name: 'A2 우유 750ml', price: 9000, icon: '🥛', category: '우유', color: 'bg-amber-50 border-amber-200 hover:bg-amber-100' },
-  { id: 'A2-180', name: 'A2 우유 180ml', price: 4000, icon: '🥛', category: '우유', color: 'bg-amber-50 border-amber-200 hover:bg-amber-100' },
-  { id: 'YG-500', name: '발효유 500ml', price: 7000, icon: '🫙', category: '발효유', color: 'bg-green-50 border-green-200 hover:bg-green-100' },
-  { id: 'YG-180', name: '발효유 180ml', price: 3500, icon: '🫙', category: '발효유', color: 'bg-green-50 border-green-200 hover:bg-green-100' },
-  { id: 'SI-001', name: '소프트아이스크림', price: 5000, icon: '🍦', category: '디저트', color: 'bg-pink-50 border-pink-200 hover:bg-pink-100' },
-  { id: 'KM-100', name: '카이막 100g', price: 12000, icon: '🧈', category: '디저트', color: 'bg-violet-50 border-violet-200 hover:bg-violet-100' },
+/** 메뉴 기본 정보 (가격은 DB에서 로드) */
+const DEFAULT_MENU_ITEMS = [
+  { id: 'A2-750', name: 'A2 우유 750ml', price: 0, icon: '🥛', category: '우유', color: 'bg-amber-50 border-amber-200 hover:bg-amber-100' },
+  { id: 'A2-180', name: 'A2 우유 180ml', price: 0, icon: '🥛', category: '우유', color: 'bg-amber-50 border-amber-200 hover:bg-amber-100' },
+  { id: 'YG-500', name: '발효유 500ml', price: 0, icon: '🫙', category: '발효유', color: 'bg-green-50 border-green-200 hover:bg-green-100' },
+  { id: 'YG-180', name: '발효유 180ml', price: 0, icon: '🫙', category: '발효유', color: 'bg-green-50 border-green-200 hover:bg-green-100' },
+  { id: 'SI-001', name: '소프트아이스크림', price: 0, icon: '🍦', category: '디저트', color: 'bg-pink-50 border-pink-200 hover:bg-pink-100' },
+  { id: 'KM-100', name: '카이막 100g', price: 0, icon: '🧈', category: '디저트', color: 'bg-violet-50 border-violet-200 hover:bg-violet-100' },
 ]
 
 export default function CafePOS() {
+  const [menuItems, setMenuItems] = useState(DEFAULT_MENU_ITEMS)
   const [cart, setCart] = useState([])
   const [payMethod, setPayMethod] = useState('CARD')
   const [showSuccess, setShowSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
+
+  /** sku_prices CAFE 채널에서 메뉴 가격 로드 */
+  useEffect(() => {
+    const loadPrices = async () => {
+      try {
+        const res = await apiGet('/settings/prices')
+        if (res.success) {
+          const cafePrices = {}
+          res.data
+            .filter((p) => p.channel === 'CAFE')
+            .forEach((p) => { cafePrices[p.sku_code] = parseInt(p.unit_price) })
+
+          setMenuItems((prev) =>
+            prev.map((item) => ({
+              ...item,
+              price: cafePrices[item.id] || item.price,
+            })),
+          )
+        }
+      } catch {
+        // DB 단가 로드 실패 시 기본값 유지
+      }
+    }
+    loadPrices()
+  }, [])
 
   // 장바구니에 추가
   const addToCart = useCallback((item) => {
@@ -89,7 +116,7 @@ export default function CafePOS() {
       <div className="flex-1 overflow-y-auto">
         <h2 className="text-lg font-bold text-slate-800 mb-3">메뉴 선택</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {MENU_ITEMS.map((item) => (
+          {menuItems.map((item) => (
             <button
               key={item.id}
               onClick={() => addToCart(item)}

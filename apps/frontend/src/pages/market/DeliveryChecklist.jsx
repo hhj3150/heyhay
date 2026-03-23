@@ -38,9 +38,17 @@ export default function DeliveryChecklist() {
   const [shipModal, setShipModal] = useState(null)
   const [shipForm, setShipForm] = useState({ courier: 'CJ대한통운', tracking_number: '' })
 
-  const today = new Date()
-  today.setDate(today.getDate() + dateOffset)
-  const dateStr = today.toISOString().split('T')[0]
+  // KST 기준 오늘 날짜 계산 (toISOString은 UTC 기준이라 KST에서 날짜가 달라질 수 있음)
+  const getKstDateStr = (offsetDays = 0) => {
+    const now = new Date()
+    now.setDate(now.getDate() + offsetDays)
+    const y = now.toLocaleDateString('ko-KR', { year: 'numeric', timeZone: 'Asia/Seoul' }).replace(/[^0-9]/g, '')
+    const m = now.toLocaleDateString('ko-KR', { month: '2-digit', timeZone: 'Asia/Seoul' }).replace(/[^0-9]/g, '').padStart(2, '0')
+    const d = now.toLocaleDateString('ko-KR', { day: '2-digit', timeZone: 'Asia/Seoul' }).replace(/[^0-9]/g, '').padStart(2, '0')
+    return `${y}-${m}-${d}`
+  }
+  const dateStr = getKstDateStr(dateOffset)
+  const today = new Date(dateStr + 'T00:00:00+09:00')
 
   const fetchData = useCallback(async () => {
     const statusParam = filter === 'all' ? '' : `&status=${filter}`

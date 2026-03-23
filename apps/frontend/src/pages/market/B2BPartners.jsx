@@ -24,6 +24,7 @@ export default function B2BPartners() {
   const [skus, setSkus] = useState([])
   const [editingOrders, setEditingOrders] = useState(false)
   const [orderForm, setOrderForm] = useState([])
+  const [b2bPrices, setB2bPrices] = useState({}) // SKU코드 → B2B 단가 매핑
   const [showAddPartner, setShowAddPartner] = useState(false)
   const [newPartner, setNewPartner] = useState({ name: '', contact_name: '', contact_phone: '', address: '', delivery_day: 'MON' })
 
@@ -37,12 +38,27 @@ export default function B2BPartners() {
       const res = await apiGet('/factory/skus')
       if (res.success) setSkus(res.data)
     } catch {
-      // SKU 목록 실패 시 기본값
       setSkus([])
     }
   }, [])
 
-  useEffect(() => { fetchPartners(); fetchSKUs() }, [fetchPartners, fetchSKUs])
+  /** sku_prices에서 B2B 채널 단가를 로드 */
+  const fetchB2BPrices = useCallback(async () => {
+    try {
+      const res = await apiGet('/settings/prices')
+      if (res.success) {
+        const priceMap = {}
+        res.data
+          .filter((p) => p.channel === 'B2B')
+          .forEach((p) => { priceMap[p.sku_code] = parseInt(p.unit_price) })
+        setB2bPrices(priceMap)
+      }
+    } catch {
+      setB2bPrices({})
+    }
+  }, [])
+
+  useEffect(() => { fetchPartners(); fetchSKUs(); fetchB2BPrices() }, [fetchPartners, fetchSKUs, fetchB2BPrices])
 
   const loadDetail = async (partner) => {
     setSelected(partner)
@@ -72,7 +88,7 @@ export default function B2BPartners() {
       is_active: o.is_active,
     }))
 
-    // SKU 목록에서 미등록 SKU 추가
+    // SKU 목록에서 미등록 SKU 추가 (B2B 기본 단가 적용)
     const existingIds = new Set(existing.map((e) => e.sku_id))
     const allItems = [...existing]
 
@@ -84,7 +100,7 @@ export default function B2BPartners() {
           sku_name: s.name,
           quantity: 0,
           frequency: 'WEEKLY',
-          unit_price: 0,
+          unit_price: b2bPrices[s.code] || 0, // sku_prices B2B 채널 단가
         })
       })
     }

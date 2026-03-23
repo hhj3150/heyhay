@@ -53,7 +53,7 @@ CREATE TABLE subscriptions (
                   CHECK (frequency IN ('1W', '2W', '4W')),   -- 주 1/2/4회
   duration_months INTEGER,                          -- 1, 3, 6개월
   -- 구독 내용
-  items           JSONB NOT NULL,                   -- [{sku_code, quantity}]
+  items           JSONB NOT NULL,                   -- [{sku_code, quantity, unit_price}]
   -- 결제
   price_per_cycle NUMERIC(10, 0) NOT NULL,
   payment_method  VARCHAR(50),

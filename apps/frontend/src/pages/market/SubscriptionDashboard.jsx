@@ -273,8 +273,26 @@ export default function SubscriptionDashboard() {
                           {FREQ_LABEL[s.frequency]}
                         </span>
                       </td>
-                      <td className="p-3 text-center text-xs text-slate-500">
-                        {items?.map((i) => `${i.sku_code}×${i.quantity}`).join(', ')}
+                      <td className="p-3 text-xs text-slate-500 group relative">
+                        <div className="text-center cursor-help">
+                          {items?.map((i) => `${i.sku_code}×${i.quantity}`).join(' + ')}
+                        </div>
+                        {/* 호버 시 단가 상세 표시 */}
+                        <div className="hidden group-hover:block absolute z-20 left-1/2 -translate-x-1/2 top-full mt-1 bg-white border border-slate-200 shadow-lg rounded-lg p-3 min-w-[220px]">
+                          <p className="text-[10px] font-bold text-slate-700 mb-1.5 border-b pb-1">결제금액 산출근거</p>
+                          {items?.map((i, idx) => (
+                            <div key={idx} className="flex justify-between text-[11px] text-slate-600 py-0.5">
+                              <span>{i.sku_code} × {i.quantity}</span>
+                              <span className="font-mono">
+                                @{(i.unit_price || 0).toLocaleString()} = {((i.unit_price || 0) * i.quantity).toLocaleString()}원
+                              </span>
+                            </div>
+                          ))}
+                          <div className="flex justify-between text-[11px] font-bold text-slate-900 border-t mt-1.5 pt-1.5">
+                            <span>합계</span>
+                            <span className="font-mono">{parseInt(s.price_per_cycle).toLocaleString()}원</span>
+                          </div>
+                        </div>
                       </td>
                       <td className="p-3 text-right font-mono font-bold">
                         {parseInt(s.price_per_cycle).toLocaleString()}원

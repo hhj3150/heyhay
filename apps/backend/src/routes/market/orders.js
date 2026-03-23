@@ -43,6 +43,7 @@ const orderSchema = z.object({
   shipping_zip: z.string().optional(),
   shipping_address: z.string().optional(),
   shipping_memo: z.string().optional(),
+  cool_box_size: z.enum(['SMALL', 'MEDIUM', 'LARGE']).optional(),
 })
 
 const statusUpdateSchema = z.object({
@@ -92,13 +93,15 @@ router.post('/', validate(orderSchema), async (req, res, next) => {
         INSERT INTO orders (
           order_number, customer_id, subscription_id, channel, external_order_id,
           subtotal, shipping_fee, discount, total_amount,
-          recipient_name, recipient_phone, shipping_zip, shipping_address, shipping_memo
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+          recipient_name, recipient_phone, shipping_zip, shipping_address, shipping_memo,
+          cool_box_size
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
         RETURNING *
       `, [
         orderNumber, o.customer_id, o.subscription_id, o.channel, o.external_order_id,
         subtotal, o.shipping_fee, o.discount, totalAmount,
         o.recipient_name, o.recipient_phone, o.shipping_zip, o.shipping_address, o.shipping_memo,
+        o.cool_box_size || null,
       ])
 
       const orderId = orderRes.rows[0].id

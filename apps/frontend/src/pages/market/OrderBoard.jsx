@@ -37,6 +37,12 @@ const CHANNEL_BADGE = {
   OFFLINE: { label: '오프라인', color: 'bg-purple-100 text-purple-700' },
 }
 
+const COOL_BOX_OPTIONS = [
+  { value: 'SMALL', label: '소 (1~2개)' },
+  { value: 'MEDIUM', label: '중 (3~5개)' },
+  { value: 'LARGE', label: '대 (6개+)' },
+]
+
 const EMPTY_OFFLINE_ORDER = {
   channel: 'PHONE',
   recipient_name: '',
@@ -44,6 +50,7 @@ const EMPTY_OFFLINE_ORDER = {
   shipping_zip: '',
   shipping_address: '',
   shipping_memo: '',
+  cool_box_size: 'SMALL',
   items: [{ sku_id: '', quantity: 1, unit_price: 0 }],
   payment_method: '계좌이체',
   paid: false,
@@ -59,32 +66,53 @@ export default function OrderBoard() {
   const [newOrderModal, setNewOrderModal] = useState(false)
   const [newOrder, setNewOrder] = useState({ ...EMPTY_OFFLINE_ORDER })
   const [skuList, setSkuList] = useState([])
+  const [skuPrices, setSkuPrices] = useState([]) // 채널별 단가 (sku_prices 테이블)
   const [confirmAction, setConfirmAction] = useState(null)
+
+  /**
+   * 주문 채널 → sku_prices 채널 매핑
+   * FACTORY_DIRECT/PHONE/KAKAO/VISIT/SMARTSTORE → RETAIL
+   * B2B → B2B, SAMPLE → 0원 처리
+   */
+  const getSkuPriceChannel = (channel) => {
+    if (channel === 'B2B') return 'B2B'
+    if (channel === 'SAMPLE') return null // 0원
+    return 'RETAIL'
+  }
+
+  /** 채널+SKU코드로 단가 조회 */
+  const lookupPrice = (skuCode, channel) => {
+    if (channel === 'SAMPLE') return 0
+    const priceChannel = getSkuPriceChannel(channel)
+    const found = skuPrices.find(
+      (p) => p.sku_code === skuCode && p.channel === priceChannel,
+    )
+    return found ? parseInt(found.unit_price) : 0
+  }
 
   const fetchOrders = useCallback(async () => {
     setLoading(true)
     const grouped = {}
     COLUMNS.forEach((c) => { grouped[c.status] = [] })
 
-    // 각 상태별 주문 병렬 조회
-    const results = await Promise.all(
-      COLUMNS.map((c) => apiGet(`/market/orders?status=${c.status}&limit=50`)),
-    )
+    // 각 상태별 주문 + SKU + 채널단가 병렬 조회
+    const [statsRes, skuRes, pricesRes, ...colResults] = await Promise.all([
+      apiGet('/market/orders/stats'),
+      apiGet('/factory/skus'),
+      apiGet('/settings/prices'),
+      ...COLUMNS.map((c) => apiGet(`/market/orders?status=${c.status}&limit=50`)),
+    ])
 
-    results.forEach((res, idx) => {
+    colResults.forEach((res, idx) => {
       if (res.success) {
         grouped[COLUMNS[idx].status] = res.data
       }
     })
 
     setOrders(grouped)
-
-    const statsRes = await apiGet('/market/orders/stats')
     if (statsRes.success) setStats(statsRes.data)
-
-    // SKU 목록 조회
-    const skuRes = await apiGet('/factory/skus')
     if (skuRes.success) setSkuList(skuRes.data)
+    if (pricesRes.success) setSkuPrices(pricesRes.data)
 
     setLoading(false)
   }, [])
@@ -99,7 +127,7 @@ export default function OrderBoard() {
     const validItems = o.items.filter((i) => i.sku_id && i.quantity > 0)
     if (validItems.length === 0) return
 
-    const res = await apiPost('/market/orders', {
+    const payload = {
       channel: o.channel,
       items: validItems.map((i) => ({
         sku_id: i.sku_id,
@@ -111,7 +139,12 @@ export default function OrderBoard() {
       shipping_zip: o.shipping_zip,
       shipping_address: o.shipping_address,
       shipping_memo: o.shipping_memo,
-    })
+    }
+    // 공장직판이 아닌 경우에만 포장 박스 사이즈 포함
+    if (o.channel !== 'FACTORY_DIRECT') {
+      payload.cool_box_size = o.cool_box_size
+    }
+    const res = await apiPost('/market/orders', payload)
 
     if (res.success) {
       const orderId = res.data?.id
@@ -288,12 +321,19 @@ export default function OrderBoard() {
                       <span className="text-sm font-bold text-emerald-600">
                         {parseInt(order.total_amount).toLocaleString()}원
                       </span>
-                      {order.ice_pack_count > 0 && (
-                        <div className="flex items-center gap-0.5 text-[10px] text-blue-500">
-                          <Snowflake className="w-3 h-3" />
-                          아이스팩 {order.ice_pack_count}
-                        </div>
-                      )}
+                      <div className="flex items-center gap-1.5">
+                        {order.cool_box_size && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-medium">
+                            박스 {order.cool_box_size === 'SMALL' ? '소' : order.cool_box_size === 'MEDIUM' ? '중' : '대'}
+                          </span>
+                        )}
+                        {order.ice_pack_count > 0 && (
+                          <div className="flex items-center gap-0.5 text-[10px] text-blue-500">
+                            <Snowflake className="w-3 h-3" />
+                            아이스팩 {order.ice_pack_count}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* 상품 내역 */}
@@ -384,7 +424,17 @@ export default function OrderBoard() {
                     { value: 'SMARTSTORE', label: '🟢 스마트스토어', color: 'bg-green-100 text-green-700 border-green-300' },
                   ].map((ch) => (
                     <button key={ch.value}
-                      onClick={() => setNewOrder((o) => ({ ...o, channel: ch.value }))}
+                      onClick={() => setNewOrder((o) => {
+                        // 채널 변경 시 기존 아이템 단가를 새 채널에 맞게 재적용
+                        const updatedItems = o.items.map((item) => {
+                          if (!item.sku_id) return item
+                          const sku = skuList.find((s) => s.id === item.sku_id)
+                          if (!sku) return item
+                          const newPrice = lookupPrice(sku.code, ch.value)
+                          return { ...item, unit_price: newPrice || sku.default_price || 0 }
+                        })
+                        return { ...o, channel: ch.value, items: updatedItems }
+                      })}
                       className={cn('px-3 py-1.5 rounded-lg text-xs font-medium border transition-all',
                         newOrder.channel === ch.value ? `${ch.color} ring-2 ring-offset-1` : 'bg-white text-slate-400 border-slate-200')}>
                       {ch.label}
@@ -421,7 +471,7 @@ export default function OrderBoard() {
                 </div>
               )}
 
-              {/* 배송 주소 (공장직판이 아닐 때만) */}
+              {/* 배송 주소 + 포장 박스 (공장직판이 아닐 때만) */}
               {newOrder.channel !== 'FACTORY_DIRECT' && (
                 <>
                   <div>
@@ -433,6 +483,21 @@ export default function OrderBoard() {
                     <label className="text-xs font-semibold text-slate-600">배송 메모</label>
                     <Input placeholder="부재시 경비실 / 벨 누르지 마세요 등" value={newOrder.shipping_memo}
                       onChange={(e) => setNewOrder((o) => ({ ...o, shipping_memo: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-slate-600 mb-1.5 block">포장 박스</label>
+                    <div className="flex gap-2">
+                      {COOL_BOX_OPTIONS.map((opt) => (
+                        <button key={opt.value}
+                          onClick={() => setNewOrder((o) => ({ ...o, cool_box_size: opt.value }))}
+                          className={cn('flex-1 px-3 py-2 rounded-lg text-xs font-medium border transition-all',
+                            newOrder.cool_box_size === opt.value
+                              ? 'bg-blue-100 text-blue-700 border-blue-300 ring-2 ring-offset-1 ring-blue-300'
+                              : 'bg-white text-slate-400 border-slate-200 hover:bg-slate-50')}>
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </>
               )}
@@ -448,7 +513,11 @@ export default function OrderBoard() {
                           onChange={(e) => {
                             const sku = skuList.find((s) => s.id === e.target.value)
                             updateNewOrderItem(idx, 'sku_id', e.target.value)
-                            if (sku) updateNewOrderItem(idx, 'unit_price', newOrder.channel === 'SAMPLE' ? 0 : (sku.default_price || 0))
+                            if (sku) {
+                              // 채널별 단가 적용: sku_prices에서 조회, 없으면 default_price 폴백
+                              const channelPrice = lookupPrice(sku.code, newOrder.channel)
+                              updateNewOrderItem(idx, 'unit_price', channelPrice || sku.default_price || 0)
+                            }
                           }}>
                           <option value="">제품 선택</option>
                           {skuList.map((s) => (

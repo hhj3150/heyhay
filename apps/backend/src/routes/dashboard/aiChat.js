@@ -141,12 +141,27 @@ const gatherContext = async () => {
     results.milking = milk.rows
   } catch { results.milking = [] }
 
-  // 단가 설정
+  // 채널별 제품 단가 (sku_prices 테이블)
   try {
-    const prices = await query(`SELECT key, value FROM settings WHERE key LIKE '%unit_price' OR key LIKE '%price%' OR key LIKE '%dairy%'`)
-    results.prices = {}
-    prices.rows.forEach((r) => { results.prices[r.key] = r.value })
-  } catch { results.prices = {} }
+    const skuPrices = await query(`
+      SELECT sp.sku_code, s.name AS sku_name, sp.channel, sp.unit_price
+      FROM sku_prices sp
+      JOIN skus s ON s.code = sp.sku_code
+      WHERE sp.effective_to IS NULL
+      ORDER BY sp.sku_code, sp.channel
+    `)
+    results.sku_prices = skuPrices.rows
+  } catch { results.sku_prices = [] }
+
+  // 시스템 설정 (system_settings 테이블: 원유단가, 배송비, 생산설정)
+  try {
+    const settings = await query('SELECT category, key, value, label FROM system_settings ORDER BY category, key')
+    results.system_settings = {}
+    settings.rows.forEach((r) => {
+      if (!results.system_settings[r.category]) results.system_settings[r.category] = {}
+      results.system_settings[r.category][r.key] = { value: r.value, label: r.label }
+    })
+  } catch { results.system_settings = {} }
 
   // 월간 착유 정산
   try {
@@ -274,6 +289,16 @@ const buildSystemPrompt = (context) => {
   등록된 SKU 및 가격 (DB 실데이터)
 ═══════════════════════════════════════
 ${JSON.stringify(context.skus, null, 2)}
+
+═══════════════════════════════════════
+  채널별 제품 단가 (sku_prices DB 실데이터)
+═══════════════════════════════════════
+${JSON.stringify(context.sku_prices, null, 2)}
+
+═══════════════════════════════════════
+  시스템 설정 (system_settings DB 실데이터)
+═══════════════════════════════════════
+${JSON.stringify(context.system_settings, null, 2)}
 
 ═══════════════════════════════════════
   등록된 B2B 거래처 (DB 실데이터)

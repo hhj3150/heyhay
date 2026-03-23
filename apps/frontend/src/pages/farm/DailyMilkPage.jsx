@@ -31,11 +31,11 @@ export default function DailyMilkPage() {
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
 
-  // 납유 단가 (원/L) — 진흥회: 180L까지 정상가, 초과분 -100원
-  const [dairyPrice, setDairyPrice] = useState(1130)
-  const [dairyOverPrice, setDairyOverPrice] = useState(100) // 초과분 차감 단가
-  const DAIRY_QUOTA = 180 // 진흥회 정상유대 기준량
-  const [d2oPrice, setD2oPrice] = useState(1200)
+  // 납유 단가 (원/L) — system_settings에서 로드, 로딩 전까지 0으로 표시
+  const [dairyPrice, setDairyPrice] = useState(0)
+  const [dairyOverPrice, setDairyOverPrice] = useState(0) // 정상단가 - 초과단가 차액
+  const [dairyQuota, setDairyQuota] = useState(180) // 진흥회 정상유대 기준량
+  const [d2oPrice, setD2oPrice] = useState(0)
   const [showPriceSetting, setShowPriceSetting] = useState(false)
   const [dairyPriceInput, setDairyPriceInput] = useState('')
   const [d2oPriceInput, setD2oPriceInput] = useState('')
@@ -44,10 +44,11 @@ export default function DailyMilkPage() {
   const [monthlyStats, setMonthlyStats] = useState(null)
 
   const fetchData = useCallback(async () => {
-    const [histRes, monthRes, priceRes] = await Promise.all([
+    const [histRes, monthRes, priceRes, settingsRes] = await Promise.all([
       apiGet('/farm/milking/daily?days=30'),
       apiGet('/farm/milking/monthly-dairy'),
       apiGet('/farm/milking/dairy-price'),
+      apiGet('/settings/system?category=MILK_PRICE'),
     ])
 
     if (histRes.success) {
@@ -62,9 +63,21 @@ export default function DailyMilkPage() {
       }
     }
     if (monthRes.success) setMonthlyStats(monthRes.data)
-    if (priceRes.success && priceRes.data) {
-      setDairyPrice(parseInt(priceRes.data.dairy_price) || 1130)
-      setD2oPrice(parseInt(priceRes.data.d2o_price) || 1200)
+
+    // system_settings에서 단가 로드 (우선), 기존 dairy-price API는 폴백
+    if (settingsRes.success && Array.isArray(settingsRes.data) && settingsRes.data.length > 0) {
+      const settingsMap = {}
+      settingsRes.data.forEach((s) => { settingsMap[s.key] = s.value })
+      const normalRate = parseInt(settingsMap.dairy_normal_rate) || 0
+      const excessRate = parseInt(settingsMap.dairy_excess_rate) || 0
+      setDairyPrice(normalRate)
+      setDairyOverPrice(normalRate - excessRate) // 차액 (예: 1130 - 1030 = 100)
+      setDairyQuota(parseInt(settingsMap.dairy_normal_limit) || 180)
+      setD2oPrice(parseInt(settingsMap.d2o_rate) || 0)
+    } else if (priceRes.success && priceRes.data) {
+      // 폴백: 기존 dairy-price API
+      setDairyPrice(parseInt(priceRes.data.dairy_price) || 0)
+      setD2oPrice(parseInt(priceRes.data.d2o_price) || 0)
     }
   }, [])
 
@@ -117,8 +130,8 @@ export default function DailyMilkPage() {
    */
   const calcDairyPayment = (liters) => {
     if (liters <= 0) return 0
-    const normalL = Math.min(liters, DAIRY_QUOTA)
-    const overL = Math.max(0, liters - DAIRY_QUOTA)
+    const normalL = Math.min(liters, dairyQuota)
+    const overL = Math.max(0, liters - dairyQuota)
     return Math.round(normalL * dairyPrice + overL * (dairyPrice - dairyOverPrice))
   }
 
@@ -146,7 +159,7 @@ export default function DailyMilkPage() {
   const mD2oDays = parseInt(monthlyStats?.d2o_days || 0)
   const mD2oTotal = parseFloat(monthlyStats?.total_d2o_l || 0)
   // 진흥회: 일별 180L 기준 차등 → 월 합계는 일수 × 기준량으로 근사
-  const mDairyNormalL = Math.min(mDairyTotal, DAIRY_QUOTA * mDairyDays)
+  const mDairyNormalL = Math.min(mDairyTotal, dairyQuota * mDairyDays)
   const mDairyOverL = Math.max(0, mDairyTotal - mDairyNormalL)
   const mDairyPayment = Math.round(mDairyNormalL * dairyPrice + mDairyOverL * (dairyPrice - dairyOverPrice))
   const mD2oPayment = Math.round(mD2oTotal * d2oPrice)
@@ -345,11 +358,11 @@ export default function DailyMilkPage() {
             <h4 className="text-sm font-semibold text-green-700 mb-2">🏛️ 낙농진흥회</h4>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               <div className="text-center p-3 bg-green-50 rounded-lg">
-                <p className="text-[10px] text-slate-500">정상유대 (≤{DAIRY_QUOTA}L/일)</p>
+                <p className="text-[10px] text-slate-500">정상유대 (≤{dairyQuota}L/일)</p>
                 <p className="text-sm font-bold text-green-700">{dairyPrice.toLocaleString()}원/L</p>
               </div>
               <div className="text-center p-3 bg-amber-50 rounded-lg">
-                <p className="text-[10px] text-slate-500">초과분 (＞{DAIRY_QUOTA}L)</p>
+                <p className="text-[10px] text-slate-500">초과분 (＞{dairyQuota}L)</p>
                 <p className="text-sm font-bold text-amber-700">{(dairyPrice - dairyOverPrice).toLocaleString()}원/L</p>
               </div>
               <div className="text-center p-3 bg-green-50 rounded-lg">

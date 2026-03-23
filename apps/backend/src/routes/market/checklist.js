@@ -18,11 +18,19 @@ const { apiResponse, apiError } = require('../../lib/shared')
 
 const router = express.Router()
 
+/** KST 기준 오늘 날짜 반환 */
+function getKstToday() {
+  const now = new Date()
+  // UTC + 9시간 = KST
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000)
+  return kst.toISOString().split('T')[0]
+}
+
 /** GET /stats — 일자별 완료율 */
 router.get('/stats', async (req, res, next) => {
   try {
     const { date } = req.query
-    const targetDate = date || new Date().toISOString().split('T')[0]
+    const targetDate = date || getKstToday()
 
     const result = await query(`
       SELECT
@@ -65,7 +73,7 @@ router.get('/stats', async (req, res, next) => {
 /** POST /generate — 오늘 체크리스트 자동 생성 */
 router.post('/generate', async (req, res, next) => {
   try {
-    const targetDate = req.body.date || new Date().toISOString().split('T')[0]
+    const targetDate = req.body.date || getKstToday()
 
     // 이미 생성된 건 확인
     const existing = await query(
@@ -208,7 +216,7 @@ router.post('/generate', async (req, res, next) => {
 router.get('/', async (req, res, next) => {
   try {
     const { date, status } = req.query
-    const targetDate = date || new Date().toISOString().split('T')[0]
+    const targetDate = date || getKstToday()
 
     const conditions = ['delivery_date = $1']
     const params = [targetDate]

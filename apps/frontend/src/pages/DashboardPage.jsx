@@ -109,20 +109,37 @@ export default function DashboardPage() {
 
   const fetchData = useCallback(async () => {
     setLoading(true)
-    const [kpiRes, alertRes, orderRes, milkRes, planRes, deliveryRes] = await Promise.all([
-      apiGet('/dashboard/kpi'),
-      apiGet('/dashboard/alerts?resolved=false'),
-      apiGet('/market/orders/stats'),
-      apiGet('/farm/milking/daily?days=7'),
-      apiGet('/factory/production-plan'),
-      apiGet('/market/checklist/stats'),
-    ])
-    if (kpiRes.success) setKpi(kpiRes.data)
-    if (alertRes.success) setAlerts(alertRes.data)
-    if (orderRes.success) setOrderStats(orderRes.data)
-    if (milkRes.success) setMilkHistory(Array.isArray(milkRes.data) ? milkRes.data.reverse() : [])
-    if (planRes.success) setProductionPlan(planRes.data)
-    if (deliveryRes.success) setDeliveryStats(deliveryRes.data)
+    try {
+      // Promise.allSettled로 개별 실패가 전체를 중단하지 않도록 처리
+      const results = await Promise.allSettled([
+        apiGet('/dashboard/kpi'),
+        apiGet('/dashboard/alerts?resolved=false'),
+        apiGet('/market/orders/stats'),
+        apiGet('/farm/milking/daily?days=7'),
+        apiGet('/factory/production-plan'),
+        apiGet('/market/checklist/stats'),
+      ])
+
+      const getValue = (idx) => results[idx].status === 'fulfilled' ? results[idx].value : null
+
+      const kpiRes = getValue(0)
+      const alertRes = getValue(1)
+      const orderRes = getValue(2)
+      const milkRes = getValue(3)
+      const planRes = getValue(4)
+      const deliveryRes = getValue(5)
+
+      // 성공한 응답만 업데이트, 실패 시 이전 state 유지
+      if (kpiRes?.success) setKpi(kpiRes.data)
+      if (alertRes?.success) setAlerts(alertRes.data)
+      if (orderRes?.success) setOrderStats(orderRes.data)
+      if (milkRes?.success) setMilkHistory(Array.isArray(milkRes.data) ? milkRes.data.reverse() : [])
+      if (planRes?.success) setProductionPlan(planRes.data)
+      if (deliveryRes?.success) setDeliveryStats(deliveryRes.data)
+    } catch (err) {
+      // 토큰 갱신 실패 등 전체 에러 시 이전 데이터 유지 (state 초기화하지 않음)
+      console.error('대시보드 데이터 조회 실패:', err)
+    }
     setLoading(false)
     setRefreshCount((c) => c + 1)
   }, [])

@@ -19,30 +19,81 @@
  */
 const { query } = require('../config/database')
 
+// ── 기본값 (DB system_settings 로드 실패 시 폴백) ──────────
 /** 공정 손실률 2% */
-const LOSS_RATE = 0.02
+const DEFAULT_LOSS_RATE = 0.02
+
+/** 일 착유량 기본값 (송영신목장 전체) */
+const DEFAULT_DAILY_MILKING_L = 550
+
+/** SKU→설정키 매핑 (system_settings key → ml 단위) */
+const SKU_MILK_KEYS = {
+  'A2-750': 'a2_750_milk_ml',
+  'A2-180': 'a2_180_milk_ml',
+  'YG-500': 'yg_500_milk_ml',
+  'YG-180': 'yg_180_milk_ml',
+  'SI-001': 'si_001_milk_ml',
+  'KM-100': 'km_100_milk_ml',
+}
+
+/** 기본 원유 소요량 (ml, loss 미적용 원본) */
+const DEFAULT_RAW_MILK_ML = {
+  'A2-750': 765,
+  'A2-180': 184,
+  'YG-500': 510,
+  'YG-180': 184,
+  'SI-001': 500,
+  'KM-100': 10000,
+}
 
 /**
- * SKU별 원유 소요량 (L / 제품 1단위)
- * loss 2% 적용
+ * system_settings PRODUCTION 카테고리에서 로스율·원유소요량을 로드
+ * @returns {Promise<{lossRate: number, dailyMilking: number, rawMilkBom: Object}>}
  */
-const RAW_MILK_BOM = Object.freeze({
-  'A2-750': { raw_milk_l: 0.75 * (1 + LOSS_RATE), description: '750ml + 2% loss = 0.765L' },
-  'A2-180': { raw_milk_l: 0.18 * (1 + LOSS_RATE), description: '180ml + 2% loss = 0.184L' },
-  'YG-500': { raw_milk_l: 0.50 * (1 + LOSS_RATE), description: '500ml + 2% loss = 0.51L' },
-  'YG-180': { raw_milk_l: 0.18 * (1 + LOSS_RATE), description: '180ml + 2% loss = 0.184L' },
-  'SI-001': { raw_milk_l: 0.5, description: '소프트아이스크림 1서빙 ~0.5L' },
-  'KM-100': { raw_milk_l: 10.0, description: '카이막 100g (크림분리+농축 10L)' },
-})
+const loadProductionSettings = async () => {
+  try {
+    const result = await query(
+      "SELECT key, value FROM system_settings WHERE category = 'PRODUCTION'",
+    )
+    const map = {}
+    result.rows.forEach((r) => { map[r.key] = r.value })
 
-/** 일 착유량 (송영신목장 전체) */
-const DAILY_MILKING_L = 550
+    const lossRate = parseFloat(map.loss_rate_pct || DEFAULT_LOSS_RATE * 100) / 100
 
-/**
- * 낙농진흥회 납유 = 착유량 - 주문 생산량
- * (고정 쿼터가 아님, 남는 양만 납유)
- */
-const DAIRY_QUOTA_L = null  // 동적 계산
+    // SKU별 원유 소요량 (ml → L 변환)
+    const rawMilkBom = {}
+    for (const [sku, settingKey] of Object.entries(SKU_MILK_KEYS)) {
+      const ml = parseInt(map[settingKey]) || DEFAULT_RAW_MILK_ML[sku]
+      rawMilkBom[sku] = {
+        raw_milk_l: ml / 1000,
+        description: `${sku} 원유 ${ml}ml (DB 설정)`,
+      }
+    }
+
+    return { lossRate, dailyMilking: DEFAULT_DAILY_MILKING_L, rawMilkBom }
+  } catch {
+    // DB 접근 실패 시 하드코딩 폴백
+    const rawMilkBom = {}
+    for (const [sku, ml] of Object.entries(DEFAULT_RAW_MILK_ML)) {
+      rawMilkBom[sku] = {
+        raw_milk_l: ml / 1000,
+        description: `${sku} 원유 ${ml}ml (기본값)`,
+      }
+    }
+    return { lossRate: DEFAULT_LOSS_RATE, dailyMilking: DEFAULT_DAILY_MILKING_L, rawMilkBom }
+  }
+}
+
+// 하위 호환: 기존 코드에서 참조하는 상수 유지 (동기 폴백용)
+const LOSS_RATE = DEFAULT_LOSS_RATE
+const DAILY_MILKING_L = DEFAULT_DAILY_MILKING_L
+const RAW_MILK_BOM = Object.freeze((() => {
+  const bom = {}
+  for (const [sku, ml] of Object.entries(DEFAULT_RAW_MILK_ML)) {
+    bom[sku] = { raw_milk_l: ml / 1000, description: `${sku} 원유 ${ml}ml` }
+  }
+  return bom
+})())
 
 /**
  * 이번주 + 다음주 구독 배송 수량 계산
@@ -213,14 +264,16 @@ const getB2BDemand = async () => {
 /**
  * SKU 수량 → 원유 필요량 변환
  * @param {Object} skuQuantities - { 'A2-750': 10, 'YG-500': 5, ... }
+ * @param {Object} [bomOverride] - DB에서 로드한 BOM (없으면 기본값 사용)
  * @returns {Object} { total_raw_milk_l, breakdown }
  */
-const calculateRawMilkNeeded = (skuQuantities) => {
+const calculateRawMilkNeeded = (skuQuantities, bomOverride) => {
+  const activeBom = bomOverride || RAW_MILK_BOM
   let totalRawMilk = 0
   const breakdown = []
 
   for (const [skuCode, qty] of Object.entries(skuQuantities)) {
-    const bom = RAW_MILK_BOM[skuCode]
+    const bom = activeBom[skuCode]
     if (!bom) continue
 
     const rawMilk = bom.raw_milk_l * qty
@@ -247,12 +300,15 @@ const calculateRawMilkNeeded = (skuQuantities) => {
  * @returns {Promise<Object>} 생산 계획 데이터
  */
 const generateProductionPlan = async () => {
-  const [subDemand, pendingDemand, cafeDemand, b2bDemand] = await Promise.all([
+  const [subDemand, pendingDemand, cafeDemand, b2bDemand, prodSettings] = await Promise.all([
     getSubscriptionDemand(2),
     getPendingOrderDemand(),
     getCafeDailyAverage(),
     getB2BDemand(),
+    loadProductionSettings(),
   ])
+
+  const { lossRate, dailyMilking, rawMilkBom } = prodSettings
 
   // 이번주 구독 수요
   const thisWeekKey = getWeekKey(new Date())
@@ -288,14 +344,15 @@ const generateProductionPlan = async () => {
   for (const [sku, data] of Object.entries(totalSkuDemand)) {
     skuTotals[sku] = data.total
   }
-  const milkCalc = calculateRawMilkNeeded(skuTotals)
+  // DB에서 로드한 BOM으로 원유 필요량 계산
+  const milkCalc = calculateRawMilkNeeded(skuTotals, rawMilkBom)
 
   // 일평균 필요량
   const dailyNeed = Math.round(milkCalc.total_raw_milk_l / 7 * 10) / 10
 
   // ★ 핵심 구조: 주문 생산 먼저 → 남는 양만 진흥회 납유
   const dailyToFactory = dailyNeed  // D2O 공장에서 생산할 양
-  const dailyToDairy = Math.round((DAILY_MILKING_L - dailyNeed) * 10) / 10  // 진흥회 납유량
+  const dailyToDairy = Math.round((dailyMilking - dailyNeed) * 10) / 10  // 진흥회 납유량
   const weeklyToDairy = Math.round(dailyToDairy * 7 * 10) / 10
 
   return {
@@ -313,17 +370,17 @@ const generateProductionPlan = async () => {
     // SKU별 통합 수요
     demand_by_sku: totalSkuDemand,
 
-    // 원유 필요량
+    // 원유 필요량 (DB 설정값 기반)
     raw_milk: {
       weekly_need_l: milkCalc.total_raw_milk_l,
       daily_need_l: dailyNeed,
-      loss_rate_pct: LOSS_RATE * 100,
+      loss_rate_pct: lossRate * 100,
       breakdown: milkCalc.breakdown,
     },
 
     // 원유 배분 계획
     milk_allocation: {
-      daily_milking_l: DAILY_MILKING_L,
+      daily_milking_l: dailyMilking,
       daily_to_factory_l: dailyToFactory,
       daily_to_dairy_l: dailyToDairy,
       weekly_to_factory_l: Math.round(dailyToFactory * 7 * 10) / 10,
@@ -333,8 +390,8 @@ const generateProductionPlan = async () => {
 
     // 목장 정보
     farm_capacity: {
-      daily_milking_l: DAILY_MILKING_L,
-      weekly_milking_l: DAILY_MILKING_L * 7,
+      daily_milking_l: dailyMilking,
+      weekly_milking_l: dailyMilking * 7,
     },
 
     // 스마트스토어 상태
@@ -347,13 +404,13 @@ const generateProductionPlan = async () => {
 
     // 결론
     summary: {
-      daily_milking: DAILY_MILKING_L,
+      daily_milking: dailyMilking,
       daily_to_factory: dailyToFactory,
       daily_to_dairy: dailyToDairy,
       status: dailyToDairy >= 0 ? '정상' : '⚠️ 생산량 초과',
       message: dailyToDairy >= 0
-        ? `일 ${DAILY_MILKING_L}L 착유 → D2O 생산 ${dailyToFactory}L + 진흥회 납유 ${dailyToDairy}L`
-        : `⚠️ 일 ${dailyNeed}L 필요하나 ${DAILY_MILKING_L}L만 착유 가능. ${Math.abs(dailyToDairy)}L 부족!`,
+        ? `일 ${dailyMilking}L 착유 → D2O 생산 ${dailyToFactory}L + 진흥회 납유 ${dailyToDairy}L`
+        : `⚠️ 일 ${dailyNeed}L 필요하나 ${dailyMilking}L만 착유 가능. ${Math.abs(dailyToDairy)}L 부족!`,
     },
   }
 }
@@ -374,6 +431,7 @@ module.exports = {
   RAW_MILK_BOM,
   DAILY_MILKING_L,
   LOSS_RATE,
+  loadProductionSettings,
   getSubscriptionDemand,
   getPendingOrderDemand,
   getCafeDailyAverage,

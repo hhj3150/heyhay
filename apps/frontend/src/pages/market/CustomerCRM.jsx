@@ -280,10 +280,21 @@ export default function CustomerCRM() {
                         <span className="text-sm font-medium">{s.plan_name}</span>
                         <span className={cn('text-[9px] px-2 py-0.5 rounded-full font-bold', statusColor)}>{statusLabel}</span>
                       </div>
-                      <div className="flex items-center gap-4 text-[10px] text-slate-500">
-                        <span>{s.frequency === '1W' ? '주 1회' : s.frequency === '2W' ? '격주' : '월 1회'}</span>
-                        <span>{parseInt(s.price_per_cycle).toLocaleString()}원/회</span>
-                        <span>{items?.map((i) => `${i.sku_code}×${i.quantity}`).join(', ')}</span>
+                      <div className="text-[10px] text-slate-500 space-y-0.5">
+                        <div className="flex items-center gap-4">
+                          <span>{s.frequency === '1W' ? '주 1회' : s.frequency === '2W' ? '격주' : '월 1회'}</span>
+                          <span className="font-bold">{parseInt(s.price_per_cycle).toLocaleString()}원/회</span>
+                        </div>
+                        <div className="flex flex-wrap gap-x-3">
+                          {items?.map((i, idx) => (
+                            <span key={idx}>
+                              {i.sku_code}×{i.quantity}
+                              {i.unit_price != null && (
+                                <span className="text-slate-400"> @{i.unit_price.toLocaleString()}={( i.unit_price * i.quantity).toLocaleString()}</span>
+                              )}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                       {s.next_payment_at && (
                         <p className="text-[10px] text-blue-500 mt-1">다음 결제: {formatDate(s.next_payment_at)}</p>

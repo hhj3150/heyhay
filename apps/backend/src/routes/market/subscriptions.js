@@ -21,8 +21,8 @@ const subscriptionSchema = z.object({
   items: z.array(z.object({
     sku_code: z.string(),
     quantity: z.number().int().positive(),
+    unit_price: z.number().int().nonnegative(),
   })).min(1),
-  price_per_cycle: z.number().int().positive(),
   payment_method: z.string().optional(),
   started_at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 })
@@ -50,6 +50,8 @@ router.get('/stats', async (req, res, next) => {
 router.post('/', validate(subscriptionSchema), async (req, res, next) => {
   try {
     const s = req.body
+    // price_per_cycle = SUM(unit_price × quantity)
+    const pricePerCycle = s.items.reduce((sum, item) => sum + item.unit_price * item.quantity, 0)
     const cohortMonth = s.started_at.substring(0, 7) + '-01'
 
     // 만료일 계산
@@ -74,7 +76,7 @@ router.post('/', validate(subscriptionSchema), async (req, res, next) => {
       RETURNING *
     `, [
       s.customer_id, s.plan_name, s.frequency, s.duration_months,
-      JSON.stringify(s.items), s.price_per_cycle, s.payment_method,
+      JSON.stringify(s.items), pricePerCycle, s.payment_method,
       s.started_at, expiresAt, nextPayment.toISOString().split('T')[0], cohortMonth,
     ])
 

@@ -70,38 +70,39 @@ ON CONFLICT DO NOTHING;
 -- ============================================================
 INSERT INTO subscriptions (customer_id, plan_name, frequency, duration_months, items, price_per_cycle, payment_method, started_at, next_payment_at, status, cohort_month) VALUES
   -- 활성 구독 10건
+  -- unit_price: A2-750=8000, A2-180=3000, YG-500=6000, YG-180=3000, KM-100=10000, SI-001=4000
   ((SELECT id FROM customers WHERE phone='010-2345-1001'), 'A2 우유 정기배송', '1W', 6,
-   '[{"sku_code":"A2-750","quantity":2},{"sku_code":"YG-180","quantity":4}]', 28000, '카드자동결제', '2025-12-01', '2026-03-24', 'ACTIVE', '2025-12-01'),
+   '[{"sku_code":"A2-750","quantity":2,"unit_price":8000},{"sku_code":"YG-180","quantity":4,"unit_price":3000}]', 28000, '카드자동결제', '2025-12-01', '2026-03-24', 'ACTIVE', '2025-12-01'),
   ((SELECT id FROM customers WHERE phone='010-2345-1003'), '프리미엄 A2 패밀리', '1W', 12,
-   '[{"sku_code":"A2-750","quantity":3},{"sku_code":"A2-180","quantity":6}]', 42000, '카드자동결제', '2025-06-01', '2026-03-25', 'ACTIVE', '2025-06-01'),
+   '[{"sku_code":"A2-750","quantity":3,"unit_price":8000},{"sku_code":"A2-180","quantity":6,"unit_price":3000}]', 42000, '카드자동결제', '2025-06-01', '2026-03-25', 'ACTIVE', '2025-06-01'),
   ((SELECT id FROM customers WHERE phone='010-2345-1005'), 'A2 우유 기본', '2W', 3,
-   '[{"sku_code":"A2-750","quantity":1},{"sku_code":"YG-500","quantity":2}]', 22000, '카드자동결제', '2026-01-15', '2026-03-26', 'ACTIVE', '2026-01-01'),
+   '[{"sku_code":"A2-750","quantity":1,"unit_price":8000},{"sku_code":"YG-500","quantity":2,"unit_price":6000}]', 20000, '카드자동결제', '2026-01-15', '2026-03-26', 'ACTIVE', '2026-01-01'),
   ((SELECT id FROM customers WHERE phone='010-2345-1007'), 'VIP 전품목', '1W', NULL,
-   '[{"sku_code":"A2-750","quantity":2},{"sku_code":"YG-500","quantity":2},{"sku_code":"KM-100","quantity":1}]', 52000, '카드자동결제', '2025-08-01', '2026-03-23', 'ACTIVE', '2025-08-01'),
+   '[{"sku_code":"A2-750","quantity":2,"unit_price":8000},{"sku_code":"YG-500","quantity":2,"unit_price":6000},{"sku_code":"KM-100","quantity":1,"unit_price":10000}]', 38000, '카드자동결제', '2025-08-01', '2026-03-23', 'ACTIVE', '2025-08-01'),
   ((SELECT id FROM customers WHERE phone='010-2345-1015'), '발효유 정기배송', '2W', 6,
-   '[{"sku_code":"YG-500","quantity":3},{"sku_code":"YG-180","quantity":6}]', 35000, '카드자동결제', '2025-10-01', '2026-03-28', 'ACTIVE', '2025-10-01'),
+   '[{"sku_code":"YG-500","quantity":3,"unit_price":6000},{"sku_code":"YG-180","quantity":6,"unit_price":3000}]', 36000, '카드자동결제', '2025-10-01', '2026-03-28', 'ACTIVE', '2025-10-01'),
   ((SELECT id FROM customers WHERE phone='010-2345-1019'), 'A2 우유 기본', '1W', 3,
-   '[{"sku_code":"A2-750","quantity":2}]', 18000, '카드자동결제', '2026-02-01', '2026-03-24', 'ACTIVE', '2026-02-01'),
+   '[{"sku_code":"A2-750","quantity":2,"unit_price":8000}]', 16000, '카드자동결제', '2026-02-01', '2026-03-24', 'ACTIVE', '2026-02-01'),
   ((SELECT id FROM customers WHERE phone='010-2345-1021'), '안성 직배송 세트', '1W', 6,
-   '[{"sku_code":"A2-750","quantity":1},{"sku_code":"A2-180","quantity":4},{"sku_code":"KM-100","quantity":1}]', 32000, '카드자동결제', '2025-09-01', '2026-03-25', 'ACTIVE', '2025-09-01'),
+   '[{"sku_code":"A2-750","quantity":1,"unit_price":8000},{"sku_code":"A2-180","quantity":4,"unit_price":3000},{"sku_code":"KM-100","quantity":1,"unit_price":10000}]', 30000, '카드자동결제', '2025-09-01', '2026-03-25', 'ACTIVE', '2025-09-01'),
   ((SELECT id FROM customers WHERE phone='010-2345-1025'), '프리미엄 A2 패밀리', '1W', NULL,
-   '[{"sku_code":"A2-750","quantity":3},{"sku_code":"YG-500","quantity":1},{"sku_code":"A2-180","quantity":4}]', 45000, '카드자동결제', '2025-07-01', '2026-03-23', 'ACTIVE', '2025-07-01'),
+   '[{"sku_code":"A2-750","quantity":3,"unit_price":8000},{"sku_code":"YG-500","quantity":1,"unit_price":6000},{"sku_code":"A2-180","quantity":4,"unit_price":3000}]', 42000, '카드자동결제', '2025-07-01', '2026-03-23', 'ACTIVE', '2025-07-01'),
   ((SELECT id FROM customers WHERE phone='010-2345-1028'), '발효유 기본', '2W', 3,
-   '[{"sku_code":"YG-500","quantity":2}]', 14000, '카드자동결제', '2026-01-20', '2026-03-27', 'ACTIVE', '2026-01-01'),
+   '[{"sku_code":"YG-500","quantity":2,"unit_price":6000}]', 12000, '카드자동결제', '2026-01-20', '2026-03-27', 'ACTIVE', '2026-01-01'),
   ((SELECT id FROM customers WHERE phone='010-2345-1030'), 'A2 우유 기본', '4W', 6,
-   '[{"sku_code":"A2-750","quantity":4}]', 32000, '카드자동결제', '2025-11-01', '2026-04-02', 'ACTIVE', '2025-11-01'),
+   '[{"sku_code":"A2-750","quantity":4,"unit_price":8000}]', 32000, '카드자동결제', '2025-11-01', '2026-04-02', 'ACTIVE', '2025-11-01'),
   -- 일시정지 3건
   ((SELECT id FROM customers WHERE phone='010-2345-1002'), 'A2 우유 기본', '2W', 3,
-   '[{"sku_code":"A2-750","quantity":2}]', 18000, '카드자동결제', '2025-12-15', NULL, 'PAUSED', '2025-12-01'),
+   '[{"sku_code":"A2-750","quantity":2,"unit_price":8000}]', 16000, '카드자동결제', '2025-12-15', NULL, 'PAUSED', '2025-12-01'),
   ((SELECT id FROM customers WHERE phone='010-2345-1013'), '발효유 기본', '2W', 3,
-   '[{"sku_code":"YG-500","quantity":1},{"sku_code":"YG-180","quantity":2}]', 15000, '카드자동결제', '2026-01-10', NULL, 'PAUSED', '2026-01-01'),
+   '[{"sku_code":"YG-500","quantity":1,"unit_price":6000},{"sku_code":"YG-180","quantity":2,"unit_price":3000}]', 12000, '카드자동결제', '2026-01-10', NULL, 'PAUSED', '2026-01-01'),
   ((SELECT id FROM customers WHERE phone='010-2345-1008'), 'A2 우유 기본', '4W', 3,
-   '[{"sku_code":"A2-750","quantity":1}]', 9000, '카드자동결제', '2026-01-01', NULL, 'PAUSED', '2026-01-01'),
+   '[{"sku_code":"A2-750","quantity":1,"unit_price":8000}]', 8000, '카드자동결제', '2026-01-01', NULL, 'PAUSED', '2026-01-01'),
   -- 해지 2건
   ((SELECT id FROM customers WHERE phone='010-2345-1014'), 'A2 우유 기본', '4W', 3,
-   '[{"sku_code":"A2-750","quantity":1}]', 9000, '카드자동결제', '2025-12-15', NULL, 'CANCELLED', '2025-12-01'),
+   '[{"sku_code":"A2-750","quantity":1,"unit_price":8000}]', 8000, '카드자동결제', '2025-12-15', NULL, 'CANCELLED', '2025-12-01'),
   ((SELECT id FROM customers WHERE phone='010-2345-1020'), '발효유 기본', '2W', 1,
-   '[{"sku_code":"YG-180","quantity":4}]', 12000, '카드자동결제', '2025-11-10', NULL, 'CANCELLED', '2025-11-01')
+   '[{"sku_code":"YG-180","quantity":4,"unit_price":3000}]', 12000, '카드자동결제', '2025-11-10', NULL, 'CANCELLED', '2025-11-01')
 ON CONFLICT DO NOTHING;
 
 -- ============================================================
@@ -124,6 +125,7 @@ DECLARE
   v_date_str TEXT;
   v_statuses TEXT[] := ARRAY['PENDING','PAID','PROCESSING','PACKED','SHIPPED','DELIVERED','DELIVERED','DELIVERED'];
   v_couriers TEXT[] := ARRAY['CJ대한통운','롯데택배','한진택배','우체국','로젠택배'];
+  v_cool_boxes TEXT[] := ARRAY['SMALL','SMALL','MEDIUM','MEDIUM','LARGE'];
 BEGIN
   SELECT id INTO v_sku_a2_750 FROM skus WHERE code = 'A2-750';
   SELECT id INTO v_sku_a2_180 FROM skus WHERE code = 'A2-180';
@@ -157,7 +159,7 @@ BEGIN
         order_number, customer_id, channel, status,
         subtotal, shipping_fee, discount, total_amount,
         recipient_name, recipient_phone, shipping_zip, shipping_address,
-        shipping_memo, ice_pack_count,
+        shipping_memo, ice_pack_count, cool_box_size,
         courier, tracking_number,
         created_at, paid_at, shipped_at, delivered_at
       ) VALUES (
@@ -178,6 +180,7 @@ BEGIN
           ELSE NULL
         END,
         CASE WHEN v_idx % 3 = 0 THEN 2 ELSE 1 END,
+        v_cool_boxes[1 + (v_idx % 5)],
         CASE WHEN v_statuses[1 + (v_idx % 8)] IN ('SHIPPED','DELIVERED') THEN v_couriers[1 + (v_idx % 5)] ELSE NULL END,
         CASE WHEN v_statuses[1 + (v_idx % 8)] IN ('SHIPPED','DELIVERED') THEN '6000' || LPAD(v_idx::TEXT, 8, '0') ELSE NULL END,
         v_created,
