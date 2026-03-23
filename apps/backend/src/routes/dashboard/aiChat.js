@@ -176,6 +176,28 @@ const gatherContext = async () => {
     results.monthly_sales = monthlySales.rows[0]
   } catch { results.monthly_sales = null }
 
+  // 재고 현황
+  try {
+    const inventory = await query(`
+      SELECT s.code, s.name,
+        COALESCE(SUM(pb.produced_qty) - COALESCE(SUM(oi_sold.qty), 0), 0) AS estimated_stock
+      FROM skus s
+      LEFT JOIN production_batches pb ON pb.sku_id = s.id AND pb.deleted_at IS NULL
+      LEFT JOIN (
+        SELECT sku_id, SUM(quantity) AS qty FROM order_items GROUP BY sku_id
+      ) oi_sold ON oi_sold.sku_id = s.id
+      WHERE s.is_active = true
+      GROUP BY s.code, s.name
+    `)
+    results.inventory = inventory.rows
+  } catch {
+    // production_batches 테이블이 없을 수 있음
+    try {
+      const skus = await query(`SELECT code, name, 0 AS estimated_stock FROM skus WHERE is_active = true`)
+      results.inventory = skus.rows
+    } catch { results.inventory = [] }
+  }
+
   // SKU 목록 (주문 처리용)
   try {
     const skus = await query(`SELECT id, code, name, default_price FROM skus WHERE is_active = true ORDER BY code`)
@@ -200,7 +222,13 @@ const buildSystemPrompt = (context) => {
   const todayMilking = context.milking?.[0]
   const hasTodayMilking = todayMilking && todayMilking.total_l > 0
 
+  // KST 기준 오늘 날짜
+  const kstNow = new Date(new Date().getTime() + 9 * 60 * 60 * 1000)
+  const todayKST = kstNow.toISOString().split('T')[0]
+
   return `당신은 HEY HAY MILK ERP의 AI 경영 비서입니다. 하원장님(ADMIN)에게 보고하는 전문 비서처럼 행동하세요.
+
+오늘 날짜 (한국 시간): ${todayKST}
 
 ═══════════════════════════════════════
   사업 구조 (Farm-to-Consumer 전체 흐름)
@@ -305,8 +333,22 @@ ${JSON.stringify(context.pending_b2b_orders, null, 2)}
 상세:
 ${JSON.stringify(context.checklist_detail, null, 2)}
 
+### 재고 현황
+${JSON.stringify(context.inventory, null, 2)}
+- 안전 재고선: 20개 이하면 부족 경고
+
 ### 고객 세그먼트
 ${JSON.stringify(context.customers, null, 2)}
+
+═══════════════════════════════════════
+  절대 규칙 (위반 금지)
+═══════════════════════════════════════
+
+1. 위에 제공된 "현재 실시간 데이터" 섹션에 없는 수치는 절대 추측하거나 생성하지 마세요
+2. 데이터가 없으면 "해당 데이터가 아직 입력되지 않았습니다"라고 정직하게 답하세요
+3. 착유량 milking 데이터의 d2o_l, dairy_l 값을 그대로 사용하세요. 임의 배분하지 마세요
+4. 납유대금 계산 시 prices 데이터의 실제 단가를 사용하세요. 단가가 없으면 "단가 미설정"이라고 답하세요
+5. "약", "대략", "추정" 같은 애매한 표현 대신 정확한 DB 수치를 사용하세요
 
 ═══════════════════════════════════════
   주문 처리 규칙 (매우 중요!)

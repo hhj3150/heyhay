@@ -18,6 +18,8 @@ import {
   Search, ShoppingCart, Settings, RotateCcw, Check, XCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 // ─── 카테고리별 제안 문구 ────────────────────────────────────
 const SUGGESTION_GROUPS = [
@@ -49,39 +51,16 @@ const SUGGESTION_GROUPS = [
   },
 ]
 
-// ─── 마크다운 간이 렌더러 ────────────────────────────────────
-/**
- * 간단한 마크다운→JSX 변환
- * 지원: **bold**, 줄바꿈(\n), 이모지(그대로 출력)
- * @param {string} text
- * @returns {JSX.Element}
- */
-function renderMarkdown(text) {
-  if (!text) return null
-
-  const lines = text.split('\n')
-
-  return lines.map((line, lineIdx) => {
-    // **bold** 처리
-    const parts = line.split(/(\*\*[^*]+\*\*)/g)
-    const rendered = parts.map((part, partIdx) => {
-      if (part.startsWith('**') && part.endsWith('**')) {
-        return (
-          <strong key={`${lineIdx}-${partIdx}`} className="font-semibold">
-            {part.slice(2, -2)}
-          </strong>
-        )
-      }
-      return <span key={`${lineIdx}-${partIdx}`}>{part}</span>
-    })
-
-    return (
-      <span key={lineIdx}>
-        {lineIdx > 0 && <br />}
-        {rendered}
-      </span>
-    )
-  })
+// ─── ReactMarkdown 커스텀 컴포넌트 ───────────────────────────
+const markdownComponents = {
+  h2: ({ children }) => <p className="font-bold text-sm mt-2 mb-1">{children}</p>,
+  h3: ({ children }) => <p className="font-semibold text-xs mt-1.5 mb-0.5">{children}</p>,
+  p: ({ children }) => <p className="text-sm mb-1">{children}</p>,
+  li: ({ children }) => <li className="text-sm ml-4 list-disc">{children}</li>,
+  strong: ({ children }) => <strong className="font-bold">{children}</strong>,
+  table: ({ children }) => <table className="text-xs w-full border-collapse my-1">{children}</table>,
+  th: ({ children }) => <th className="border-b border-slate-200 px-2 py-1 text-left font-semibold">{children}</th>,
+  td: ({ children }) => <td className="border-b border-slate-100 px-2 py-1">{children}</td>,
 }
 
 // ─── 타이핑 효과 훅 ─────────────────────────────────────────
@@ -146,7 +125,11 @@ const MessageBubble = memo(function MessageBubble({ role, content, isLatestAssis
             : 'bg-slate-100 text-slate-800 rounded-bl-md',
         )}
       >
-        {isUser ? content : renderMarkdown(displayed)}
+        {isUser ? content : (
+          <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+            {displayed}
+          </ReactMarkdown>
+        )}
       </div>
     </div>
   )
@@ -282,7 +265,12 @@ export default function AiVoiceAssistant() {
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [transcript, setTranscript] = useState('')
-  const [messages, setMessages] = useState([])
+  const [messages, setMessages] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('ai_chat_messages')
+      return saved ? JSON.parse(saved) : []
+    } catch { return [] }
+  })
   const [pendingOrder, setPendingOrder] = useState(null)
   const [latestAssistantIdx, setLatestAssistantIdx] = useState(-1)
 
@@ -300,6 +288,14 @@ export default function AiVoiceAssistant() {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
     }
   }, [messages, pendingOrder])
+
+  // sessionStorage에 대화 저장 (최대 20개)
+  useEffect(() => {
+    try {
+      const toSave = messages.slice(-20)
+      sessionStorage.setItem('ai_chat_messages', JSON.stringify(toSave))
+    } catch { /* sessionStorage 접근 실패 무시 */ }
+  }, [messages])
 
   // ── TTS ──
   const speak = useCallback((text) => {
@@ -492,6 +488,7 @@ export default function AiVoiceAssistant() {
     setPendingOrder(null)
     setTranscript('')
     setLatestAssistantIdx(-1)
+    sessionStorage.removeItem('ai_chat_messages')
     stopSpeaking()
   }, [stopSpeaking])
 

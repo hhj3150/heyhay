@@ -14,6 +14,7 @@ import {
   ChevronRight, Snowflake, Plus, X, Trash2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
 const COLUMNS = [
   { status: 'PENDING', label: '주문접수', icon: Clock, color: 'border-t-slate-400', bg: 'bg-slate-50', nextStatus: 'PAID', nextLabel: '결제확인' },
@@ -58,6 +59,7 @@ export default function OrderBoard() {
   const [newOrderModal, setNewOrderModal] = useState(false)
   const [newOrder, setNewOrder] = useState({ ...EMPTY_OFFLINE_ORDER })
   const [skuList, setSkuList] = useState([])
+  const [confirmAction, setConfirmAction] = useState(null)
 
   const fetchOrders = useCallback(async () => {
     setLoading(true)
@@ -241,11 +243,11 @@ export default function OrderBoard() {
       )}
 
       {/* 칸반 보드 */}
-      <div className="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory" style={{ minHeight: '50vh' }}>
+      <div className="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory" style={{ minHeight: '55vh' }}>
         {COLUMNS.map((col) => {
           const colOrders = filterOrders(orders[col.status] || [])
           return (
-            <div key={col.status} className="flex-shrink-0 w-64 sm:w-72 snap-start">
+            <div key={col.status} className="flex-shrink-0 snap-start" style={{ minWidth: '280px', width: '280px' }}>
               <div className={cn('rounded-t-lg border-t-4 p-3 mb-2', col.color, col.bg)}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -322,13 +324,12 @@ export default function OrderBoard() {
                         size="sm"
                         className="w-full text-xs h-8"
                         variant={col.status === 'PENDING' ? 'default' : 'outline'}
-                        onClick={() => {
-                          if (col.nextStatus === 'SHIPPED') {
-                            setShipModal(order.id)
-                          } else {
-                            moveOrder(order.id, col.nextStatus)
-                          }
-                        }}
+                        onClick={() => setConfirmAction({
+                          orderId: order.id,
+                          orderNumber: order.order_number,
+                          nextStatus: col.nextStatus,
+                          nextLabel: col.nextLabel,
+                        })}
                       >
                         {col.nextLabel}
                         <ChevronRight className="w-3 h-3" />
@@ -501,6 +502,23 @@ export default function OrderBoard() {
           </div>
         </div>
       )}
+
+      {/* 확인 다이얼로그 */}
+      <ConfirmDialog
+        open={!!confirmAction}
+        title="주문 상태 변경"
+        description={`${confirmAction?.orderNumber} 주문을 "${confirmAction?.nextLabel}"(으)로 변경하시겠습니까?`}
+        confirmText={confirmAction?.nextLabel}
+        onConfirm={() => {
+          if (confirmAction.nextStatus === 'SHIPPED') {
+            setShipModal(confirmAction.orderId)
+          } else {
+            moveOrder(confirmAction.orderId, confirmAction.nextStatus)
+          }
+          setConfirmAction(null)
+        }}
+        onCancel={() => setConfirmAction(null)}
+      />
 
       {/* 발송 처리 모달 */}
       {shipModal && (

@@ -46,7 +46,7 @@ export default function AppLayout() {
         )}
         <Outlet />
       </main>
-      <Toaster richColors position="top-right" />
+      <Toaster richColors position="top-right" closeButton />
       <AiVoiceAssistant />
     </div>
   )

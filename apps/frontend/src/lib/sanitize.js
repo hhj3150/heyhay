@@ -9,7 +9,7 @@ import DOMPurify from 'dompurify'
 export const sanitizeHtml = (html) => {
   if (!html) return ''
   return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ['b', 'strong', 'i', 'em', 'br', 'p', 'span', 'ul', 'ol', 'li'],
+    ALLOWED_TAGS: ['b', 'strong', 'i', 'em', 'br', 'p', 'span', 'ul', 'ol', 'li', 'h2', 'h3'],
     ALLOWED_ATTR: ['class'],
   })
 }

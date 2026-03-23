@@ -17,6 +17,7 @@ export default defineConfig({
         description: '송영신목장 통합 ERP 시스템',
         theme_color: '#f59e0b',
         background_color: '#f8fafc',
+        lang: 'ko',
         display: 'standalone',
         scope: '/',
         start_url: '/',
