@@ -14,6 +14,7 @@ import {
   Package, Calendar, ChevronRight, X, Clock, ArrowUpRight,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { formatDate } from '@/lib/date'
 
 const SEGMENT_CONFIG = {
   ALL: { label: '전체', icon: Users, color: 'text-slate-600', bg: 'bg-slate-100' },
@@ -254,7 +255,7 @@ export default function CustomerCRM() {
             <div className="text-center p-3 bg-amber-50 rounded-lg">
               <Calendar className="w-4 h-4 text-amber-500 mx-auto mb-1" />
               <p className="text-[10px] text-slate-500">첫 주문</p>
-              <p className="text-xs font-bold text-amber-600">{selected.first_order_at || '-'}</p>
+              <p className="text-xs font-bold text-amber-600">{formatDate(selected.first_order_at)}</p>
             </div>
           </div>
 
@@ -283,7 +284,7 @@ export default function CustomerCRM() {
                         <span>{items?.map((i) => `${i.sku_code}×${i.quantity}`).join(', ')}</span>
                       </div>
                       {s.next_payment_at && (
-                        <p className="text-[10px] text-blue-500 mt-1">다음 결제: {s.next_payment_at}</p>
+                        <p className="text-[10px] text-blue-500 mt-1">다음 결제: {formatDate(s.next_payment_at)}</p>
                       )}
                     </div>
                   )

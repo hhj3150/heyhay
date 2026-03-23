@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts'
 import { cn } from '@/lib/utils'
+import { formatDate } from '@/lib/date'
 
 const STATUS_CONFIG = {
   ACTIVE: { label: '활성', color: 'text-green-700', bg: 'bg-green-100', icon: UserCheck },
@@ -207,7 +208,7 @@ export default function SubscriptionDashboard() {
                       <span className="text-sm font-bold text-violet-600">
                         {parseInt(s.price_per_cycle).toLocaleString()}원
                       </span>
-                      <span className="text-[10px] text-slate-400">{s.next_payment_at}</span>
+                      <span className="text-[10px] text-slate-400">{formatDate(s.next_payment_at)}</span>
                     </div>
                   )
                 })}
@@ -278,7 +279,7 @@ export default function SubscriptionDashboard() {
                       <td className="p-3 text-right font-mono font-bold">
                         {parseInt(s.price_per_cycle).toLocaleString()}원
                       </td>
-                      <td className="p-3 text-center text-xs">{s.next_payment_at || '-'}</td>
+                      <td className="p-3 text-center text-xs">{formatDate(s.next_payment_at)}</td>
                       <td className="p-3 text-center">
                         <span className={cn('text-[10px] px-2 py-0.5 rounded-full font-bold', cfg.bg, cfg.color)}>
                           {cfg.label}

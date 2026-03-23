@@ -14,6 +14,18 @@ const { apiResponse, apiError } = require('../../lib/shared')
 
 const router = express.Router()
 
+/** 주문 상태 전환 맵 — 허용되지 않은 전환은 거부 */
+const VALID_TRANSITIONS = {
+  PENDING: ['PAID', 'CANCELLED'],
+  PAID: ['PROCESSING', 'CANCELLED'],
+  PROCESSING: ['PACKED', 'CANCELLED'],
+  PACKED: ['SHIPPED', 'CANCELLED'],
+  SHIPPED: ['DELIVERED'],
+  DELIVERED: [],
+  CANCELLED: [],
+  RETURNED: [],
+}
+
 const orderSchema = z.object({
   customer_id: z.string().uuid().optional(),
   subscription_id: z.string().uuid().optional(),
@@ -157,6 +169,17 @@ router.get('/:id', async (req, res, next) => {
 router.put('/:id', validate(statusUpdateSchema), async (req, res, next) => {
   try {
     const { status, courier, tracking_number, return_reason, return_type } = req.body
+
+    // 현재 상태 조회 후 유효한 전환인지 검증
+    const current = await query('SELECT status FROM orders WHERE id = $1 AND deleted_at IS NULL', [req.params.id])
+    if (current.rows.length === 0) return res.status(404).json(apiError('NOT_FOUND', '주문을 찾을 수 없습니다'))
+
+    const currentStatus = current.rows[0].status
+    const allowedNext = VALID_TRANSITIONS[currentStatus] || []
+    if (!allowedNext.includes(status)) {
+      return res.status(400).json(apiError('INVALID_TRANSITION', `${currentStatus} → ${status} 전환은 허용되지 않습니다`))
+    }
+
     const updates = ['status = $1', 'updated_at = NOW()']
     const params = [status]
     let idx = 2

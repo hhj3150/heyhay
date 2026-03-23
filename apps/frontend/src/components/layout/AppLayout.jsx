@@ -6,6 +6,7 @@ import Sidebar from './Sidebar'
 import AiVoiceAssistant from '@/components/AiVoiceAssistant'
 import useAuthStore from '@/stores/authStore'
 import { ArrowLeft, Home } from 'lucide-react'
+import { Toaster } from 'sonner'
 
 export default function AppLayout() {
   const { isAuthenticated } = useAuthStore()
@@ -43,6 +44,7 @@ export default function AppLayout() {
         )}
         <Outlet />
       </main>
+      <Toaster richColors position="top-right" />
       <AiVoiceAssistant />
     </div>
   )
