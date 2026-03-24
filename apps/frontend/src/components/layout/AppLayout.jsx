@@ -3,10 +3,12 @@
  */
 import { Outlet, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
+import MobileBottomNav from './MobileBottomNav'
 import AiVoiceAssistant from '@/components/AiVoiceAssistant'
 import useAuthStore from '@/stores/authStore'
 import { ArrowLeft, Home } from 'lucide-react'
 import { Toaster } from 'sonner'
+import OfflineIndicator from '@/components/OfflineIndicator'
 
 export default function AppLayout() {
   const { isAuthenticated } = useAuthStore()
@@ -23,7 +25,8 @@ export default function AppLayout() {
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto bg-slate-50 p-3 pt-14 lg:p-6 lg:pt-6" role="main">
+      <main className="flex-1 overflow-y-auto bg-slate-50 p-3 pt-14 pb-20 lg:p-6 lg:pt-6 lg:pb-6" role="main">
+        <OfflineIndicator />
         {!isHome && (
           <div className="flex items-center gap-2 mb-4">
             <button
@@ -48,6 +51,7 @@ export default function AppLayout() {
       </main>
       <Toaster richColors position="top-right" closeButton />
       <AiVoiceAssistant />
+      <MobileBottomNav />
     </div>
   )
 }

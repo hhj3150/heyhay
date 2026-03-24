@@ -11,7 +11,7 @@ import {
   Milk, Factory, ShoppingCart, Coffee, TrendingUp, TrendingDown,
   AlertTriangle, Bell, CheckCircle2, Users, CreditCard, ChevronRight,
   Package, Truck, Clock, DollarSign, RefreshCw, Building2,
-  Zap, ArrowRight, BarChart3, CalendarDays, Boxes, Send,
+  Zap, ArrowRight, ArrowDown, BarChart3, CalendarDays, Boxes, Send,
 } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -241,10 +241,10 @@ export default function DashboardPage() {
       )}
 
       {/* ───── 핵심 KPI 6개 (카운트업 애니메이션) ───── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         <Card
           className={cn(
-            'hover:shadow-lg transition-all cursor-pointer border-l-4 border-l-amber-400',
+            'hover:shadow-lg transition-all cursor-pointer border-l-4 border-l-amber-400 active:scale-95',
             flash && 'ring-2 ring-amber-200 ring-opacity-50',
           )}
           onClick={() => navigate('/farm/milk')}
@@ -270,7 +270,7 @@ export default function DashboardPage() {
 
         <Card
           className={cn(
-            'hover:shadow-lg transition-all cursor-pointer border-l-4 border-l-emerald-400',
+            'hover:shadow-lg transition-all cursor-pointer border-l-4 border-l-emerald-400 active:scale-95',
             flash && 'ring-2 ring-emerald-200 ring-opacity-50',
           )}
           onClick={() => navigate('/market/orders')}
@@ -292,7 +292,7 @@ export default function DashboardPage() {
 
         <Card
           className={cn(
-            'hover:shadow-lg transition-all cursor-pointer border-l-4 border-l-violet-400',
+            'hover:shadow-lg transition-all cursor-pointer border-l-4 border-l-violet-400 active:scale-95',
             flash && 'ring-2 ring-violet-200 ring-opacity-50',
           )}
           onClick={() => navigate('/market/subscriptions')}
@@ -311,7 +311,7 @@ export default function DashboardPage() {
 
         <Card
           className={cn(
-            'hover:shadow-lg transition-all cursor-pointer border-l-4 border-l-blue-400',
+            'hover:shadow-lg transition-all cursor-pointer border-l-4 border-l-blue-400 active:scale-95',
             flash && 'ring-2 ring-blue-200 ring-opacity-50',
           )}
           onClick={() => navigate('/factory/plan')}
@@ -330,7 +330,7 @@ export default function DashboardPage() {
 
         <Card
           className={cn(
-            'hover:shadow-lg transition-all cursor-pointer border-l-4 border-l-pink-400',
+            'hover:shadow-lg transition-all cursor-pointer border-l-4 border-l-pink-400 active:scale-95',
             flash && 'ring-2 ring-pink-200 ring-opacity-50',
           )}
           onClick={() => navigate('/market/b2b')}
@@ -349,7 +349,7 @@ export default function DashboardPage() {
 
         <Card
           className={cn(
-            'hover:shadow-lg transition-all cursor-pointer border-l-4 border-l-slate-400',
+            'hover:shadow-lg transition-all cursor-pointer border-l-4 border-l-slate-400 active:scale-95',
             flash && 'ring-2 ring-slate-200 ring-opacity-50',
           )}
           onClick={() => navigate('/market/overview')}
@@ -378,9 +378,9 @@ export default function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* 메인 흐름 */}
-            <div className="flex items-center gap-1 text-center">
-              <div className="flex-1 p-3 bg-gradient-to-b from-amber-50 to-amber-100 rounded-xl border border-amber-200">
+            {/* 메인 흐름: 모바일 세로 / sm 이상 가로 */}
+            <div className="flex flex-col sm:flex-row items-center gap-1 text-center">
+              <div className="w-full sm:flex-1 p-3 bg-gradient-to-b from-amber-50 to-amber-100 rounded-xl border border-amber-200">
                 <Milk className="w-5 h-5 text-amber-500 mx-auto mb-1" />
                 <p className="text-[9px] text-slate-500 font-medium">착유</p>
                 <p className="text-lg font-black text-amber-600">
@@ -389,10 +389,11 @@ export default function DashboardPage() {
               </div>
 
               <div className="flex flex-col items-center shrink-0 px-1">
-                <ArrowRight className="w-4 h-4 text-amber-400" />
+                <ArrowDown className="w-4 h-4 text-amber-400 sm:hidden" />
+                <ArrowRight className="w-4 h-4 text-amber-400 hidden sm:block" />
               </div>
 
-              <div className="flex-1 p-3 bg-gradient-to-b from-blue-50 to-blue-100 rounded-xl border border-blue-200">
+              <div className="w-full sm:flex-1 p-3 bg-gradient-to-b from-blue-50 to-blue-100 rounded-xl border border-blue-200">
                 <Factory className="w-5 h-5 text-blue-500 mx-auto mb-1" />
                 <p className="text-[9px] text-slate-500 font-medium">D2O 공장</p>
                 <p className="text-lg font-black text-blue-600">
@@ -401,10 +402,11 @@ export default function DashboardPage() {
               </div>
 
               <div className="flex flex-col items-center shrink-0 px-1">
-                <ArrowRight className="w-4 h-4 text-blue-400" />
+                <ArrowDown className="w-4 h-4 text-blue-400 sm:hidden" />
+                <ArrowRight className="w-4 h-4 text-blue-400 hidden sm:block" />
               </div>
 
-              <div className="flex-1 p-3 bg-gradient-to-b from-emerald-50 to-emerald-100 rounded-xl border border-emerald-200">
+              <div className="w-full sm:flex-1 p-3 bg-gradient-to-b from-emerald-50 to-emerald-100 rounded-xl border border-emerald-200">
                 <Package className="w-5 h-5 text-emerald-500 mx-auto mb-1" />
                 <p className="text-[9px] text-slate-500 font-medium">제품 출하</p>
                 <p className="text-lg font-black text-emerald-600">
@@ -703,16 +705,16 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             {alerts.length > 0 ? (
-              <div className="space-y-2 max-h-[200px] overflow-y-auto">
+              <div className="space-y-2 max-h-[280px] overflow-y-auto">
                 {alerts.slice(0, 8).map((a) => (
-                  <div key={a.id} className={cn('flex items-start gap-2 p-2.5 border-l-4 rounded-lg text-xs', PRIORITY_STYLE[a.priority]?.color)}>
-                    <div className={cn('w-2 h-2 rounded-full mt-1 shrink-0', PRIORITY_STYLE[a.priority]?.dot)} />
+                  <div key={a.id} className={cn('flex items-start gap-3 p-4 sm:p-2.5 border-l-4 rounded-lg text-sm sm:text-xs', PRIORITY_STYLE[a.priority]?.color)}>
+                    <div className={cn('w-2.5 sm:w-2 h-2.5 sm:h-2 rounded-full mt-1 shrink-0', PRIORITY_STYLE[a.priority]?.dot)} />
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold truncate">{a.title}</p>
                       <p className="text-slate-500 truncate mt-0.5">{a.message}</p>
                     </div>
-                    <button onClick={() => resolveAlert(a.id)} className="p-1 hover:bg-white rounded shrink-0">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+                    <button onClick={() => resolveAlert(a.id)} className="p-2 sm:p-1 hover:bg-white rounded shrink-0">
+                      <CheckCircle2 className="w-5 h-5 sm:w-3.5 sm:h-3.5 text-green-500" />
                     </button>
                   </div>
                 ))}
@@ -728,7 +730,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ───── 빠른 접근 버튼 (강화 디자인) ───── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
         {[
           { label: '주문 등록', desc: '새 주문 접수', icon: ShoppingCart, path: '/market/orders', color: 'from-emerald-500 to-emerald-600', ring: 'hover:ring-emerald-300' },
           { label: '배송 체크', desc: '발송 관리', icon: Package, path: '/market/checklist', color: 'from-blue-500 to-blue-600', ring: 'hover:ring-blue-300' },

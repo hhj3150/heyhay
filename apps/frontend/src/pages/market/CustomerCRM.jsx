@@ -11,7 +11,7 @@ import { apiGet } from '@/lib/api'
 import {
   Users, Search, UserCheck, UserX, Crown, Moon, Sparkles,
   Phone, Mail, MapPin, ShoppingCart, CreditCard, TrendingUp,
-  Package, Calendar, ChevronRight, X, Clock, ArrowUpRight,
+  Package, Calendar, ChevronRight, X, Clock, ArrowUpRight, ArrowLeft,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/date'
@@ -185,9 +185,24 @@ export default function CustomerCRM() {
         </div>
       </div>
 
-      {/* 오른쪽: 고객 상세 패널 — 모바일에서 전체 너비 */}
+      {/* 오른쪽: 고객 상세 패널 — 모바일에서 전체 화면 슬라이드 */}
       {selected && (
-        <div className="w-full lg:w-[55%] lg:border-l lg:pl-6 overflow-y-auto">
+        <div className={cn(
+          'overflow-y-auto',
+          // 모바일: 고정 전체화면 오버레이
+          'fixed inset-0 z-40 bg-white p-4',
+          // 데스크톱: 기존 사이드 패널
+          'lg:static lg:z-auto lg:p-0 lg:w-[55%] lg:border-l lg:pl-6',
+        )}>
+          {/* 모바일 뒤로 버튼 */}
+          <button
+            onClick={() => setSelected(null)}
+            className="lg:hidden flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-4 -ml-1"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            고객 목록으로
+          </button>
+
           {/* 상단: 고객 프로필 */}
           <div className="flex items-start justify-between mb-6">
             <div>
@@ -208,7 +223,8 @@ export default function CustomerCRM() {
                 </div>
               </div>
             </div>
-            <button onClick={() => setSelected(null)} className="p-1.5 hover:bg-slate-100 rounded-lg">
+            {/* X 버튼: 데스크톱에서만 표시 (모바일은 뒤로 버튼 사용) */}
+            <button onClick={() => setSelected(null)} className="hidden lg:block p-1.5 hover:bg-slate-100 rounded-lg">
               <X className="w-5 h-5 text-slate-400" />
             </button>
           </div>
@@ -238,7 +254,7 @@ export default function CustomerCRM() {
           </div>
 
           {/* KPI 카드 */}
-          <div className="grid grid-cols-4 gap-3 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
             <div className="text-center p-3 bg-blue-50 rounded-lg">
               <ShoppingCart className="w-4 h-4 text-blue-500 mx-auto mb-1" />
               <p className="text-[10px] text-slate-500">총 주문</p>

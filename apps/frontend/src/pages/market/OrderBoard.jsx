@@ -68,6 +68,7 @@ export default function OrderBoard() {
   const [skuList, setSkuList] = useState([])
   const [skuPrices, setSkuPrices] = useState([]) // 채널별 단가 (sku_prices 테이블)
   const [confirmAction, setConfirmAction] = useState(null)
+  const [activeTab, setActiveTab] = useState('PENDING') // 모바일 탭 상태
 
   /**
    * 주문 채널 → sku_prices 채널 매핑
@@ -275,8 +276,128 @@ export default function OrderBoard() {
         </div>
       )}
 
-      {/* 칸반 보드 */}
-      <div className="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory" style={{ minHeight: '55vh' }}>
+      {/* 모바일: 탭 방식 (md 미만) */}
+      <div className="md:hidden">
+        {/* 상태 탭 버튼 */}
+        <div className="flex gap-1.5 overflow-x-auto pb-2 -mx-1 px-1">
+          {COLUMNS.map((col) => {
+            const count = filterOrders(orders[col.status] || []).length
+            const isActive = activeTab === col.status
+            return (
+              <button
+                key={col.status}
+                onClick={() => setActiveTab(col.status)}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all shrink-0',
+                  isActive
+                    ? `${col.bg} border-t-2 ${col.color} ring-2 ring-offset-1`
+                    : 'text-slate-400 bg-white border border-slate-100 hover:bg-slate-50',
+                )}
+              >
+                <col.icon className="w-3.5 h-3.5" />
+                {col.label}
+                <span className={cn(
+                  'text-[10px] px-1.5 py-0.5 rounded-full font-bold min-w-[20px] text-center',
+                  isActive ? 'bg-white/80' : 'bg-slate-100',
+                )}>
+                  {count}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* 선택된 탭의 주문 카드 리스트 */}
+        <div className="space-y-3 mt-3" style={{ minHeight: '50vh' }}>
+          {(() => {
+            const activeCol = COLUMNS.find((c) => c.status === activeTab)
+            const tabOrders = filterOrders(orders[activeTab] || [])
+            return tabOrders.length > 0 ? tabOrders.map((order) => (
+              <div key={order.id} className="bg-white rounded-lg border shadow-sm p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-mono text-xs font-bold text-slate-700">{order.order_number}</span>
+                  <span className={cn('text-[9px] px-1.5 py-0.5 rounded font-medium',
+                    CHANNEL_BADGE[order.channel]?.color)}>
+                    {CHANNEL_BADGE[order.channel]?.label}
+                  </span>
+                </div>
+                <div className="mb-2">
+                  <p className="text-sm font-medium">{order.recipient_name || order.customer_name || '미지정'}</p>
+                  {order.recipient_phone && (
+                    <div className="flex items-center gap-1 text-xs text-slate-500">
+                      <Phone className="w-3 h-3" />
+                      {order.recipient_phone}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-bold text-emerald-600">
+                    {parseInt(order.total_amount).toLocaleString()}원
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {order.cool_box_size && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-medium">
+                        박스 {order.cool_box_size === 'SMALL' ? '소' : order.cool_box_size === 'MEDIUM' ? '중' : '대'}
+                      </span>
+                    )}
+                    {order.ice_pack_count > 0 && (
+                      <div className="flex items-center gap-0.5 text-[10px] text-blue-500">
+                        <Snowflake className="w-3 h-3" />
+                        아이스팩 {order.ice_pack_count}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {order.items && order.items.length > 0 && (
+                  <p className="text-[10px] text-slate-500 mb-2 truncate">
+                    {order.items.map((item) => `${item.sku_code} ×${item.quantity}`).join(', ')}
+                  </p>
+                )}
+                {order.shipping_address && (
+                  <div className="flex items-start gap-1 text-[10px] text-slate-400 mb-2">
+                    <MapPin className="w-3 h-3 mt-0.5 shrink-0" />
+                    <span className="line-clamp-1">{order.shipping_address}</span>
+                  </div>
+                )}
+                {order.shipping_memo && (
+                  <div className="text-[10px] bg-amber-50 text-amber-700 px-2 py-1 rounded mb-2 font-medium">
+                    {order.shipping_memo}
+                  </div>
+                )}
+                {order.tracking_number && (
+                  <div className="text-[10px] bg-violet-50 text-violet-700 px-2 py-1 rounded mb-2">
+                    {order.courier} {order.tracking_number}
+                  </div>
+                )}
+                {activeCol?.nextStatus && (
+                  <Button
+                    size="sm"
+                    className="w-full text-xs h-10 active:scale-95 transition-transform"
+                    variant={activeTab === 'PENDING' ? 'default' : 'outline'}
+                    onClick={() => setConfirmAction({
+                      orderId: order.id,
+                      orderNumber: order.order_number,
+                      nextStatus: activeCol.nextStatus,
+                      nextLabel: activeCol.nextLabel,
+                    })}
+                  >
+                    {activeCol.nextLabel}
+                    <ChevronRight className="w-3 h-3" />
+                  </Button>
+                )}
+                <p className="text-[9px] text-slate-300 mt-2 text-right">
+                  {new Date(order.created_at).toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </div>
+            )) : (
+              <div className="text-center text-slate-300 py-12 text-xs">없음</div>
+            )
+          })()}
+        </div>
+      </div>
+
+      {/* 데스크톱: 기존 칸반 보드 (md 이상) */}
+      <div className="hidden md:flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory" style={{ minHeight: '55vh' }}>
         {COLUMNS.map((col) => {
           const colOrders = filterOrders(orders[col.status] || [])
           return (
@@ -296,7 +417,6 @@ export default function OrderBoard() {
               <div className="space-y-2">
                 {colOrders.map((order) => (
                   <div key={order.id} className="bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow p-3">
-                    {/* 주문번호 + 채널 */}
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-mono text-xs font-bold text-slate-700">{order.order_number}</span>
                       <span className={cn('text-[9px] px-1.5 py-0.5 rounded font-medium',
@@ -304,8 +424,6 @@ export default function OrderBoard() {
                         {CHANNEL_BADGE[order.channel]?.label}
                       </span>
                     </div>
-
-                    {/* 고객 정보 */}
                     <div className="mb-2">
                       <p className="text-sm font-medium">{order.recipient_name || order.customer_name || '미지정'}</p>
                       {order.recipient_phone && (
@@ -315,8 +433,6 @@ export default function OrderBoard() {
                         </div>
                       )}
                     </div>
-
-                    {/* 금액 */}
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-bold text-emerald-600">
                         {parseInt(order.total_amount).toLocaleString()}원
@@ -335,41 +451,31 @@ export default function OrderBoard() {
                         )}
                       </div>
                     </div>
-
-                    {/* 상품 내역 */}
                     {order.items && order.items.length > 0 && (
                       <p className="text-[10px] text-slate-500 mb-2 truncate">
                         {order.items.map((item) => `${item.sku_code} ×${item.quantity}`).join(', ')}
                       </p>
                     )}
-
-                    {/* 배송 주소 (요약) */}
                     {order.shipping_address && (
                       <div className="flex items-start gap-1 text-[10px] text-slate-400 mb-2">
                         <MapPin className="w-3 h-3 mt-0.5 shrink-0" />
                         <span className="line-clamp-1">{order.shipping_address}</span>
                       </div>
                     )}
-
-                    {/* 배송 메모 */}
                     {order.shipping_memo && (
                       <div className="text-[10px] bg-amber-50 text-amber-700 px-2 py-1 rounded mb-2 font-medium">
                         {order.shipping_memo}
                       </div>
                     )}
-
-                    {/* 운송장 (배송중) */}
                     {order.tracking_number && (
                       <div className="text-[10px] bg-violet-50 text-violet-700 px-2 py-1 rounded mb-2">
                         {order.courier} {order.tracking_number}
                       </div>
                     )}
-
-                    {/* 다음 단계 버튼 */}
                     {col.nextStatus && (
                       <Button
                         size="sm"
-                        className="w-full text-xs h-8"
+                        className="w-full text-xs h-10 active:scale-95 transition-transform"
                         variant={col.status === 'PENDING' ? 'default' : 'outline'}
                         onClick={() => setConfirmAction({
                           orderId: order.id,
@@ -382,8 +488,6 @@ export default function OrderBoard() {
                         <ChevronRight className="w-3 h-3" />
                       </Button>
                     )}
-
-                    {/* 날짜 */}
                     <p className="text-[9px] text-slate-300 mt-2 text-right">
                       {new Date(order.created_at).toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </p>
