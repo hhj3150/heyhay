@@ -88,8 +88,9 @@ router.post('/generate', async (req, res, next) => {
 
     await transaction(async (client) => {
       // 1) 활성 구독에서 오늘 배송분 생성
+      // next_payment_at 포함하여 조회 — 날짜 비교의 핵심 컬럼
       const subs = await client.query(`
-        SELECT s.id, s.frequency, s.items, s.price_per_cycle,
+        SELECT s.id, s.frequency, s.items, s.price_per_cycle, s.next_payment_at,
                c.name, c.phone, c.address_main, c.address_detail, c.address_zip
         FROM subscriptions s
         JOIN customers c ON s.customer_id = c.id
@@ -97,23 +98,34 @@ router.post('/generate', async (req, res, next) => {
       `)
 
       const freqDays = { '1W': 7, '2W': 14, '4W': 28 }
-      const today = new Date(targetDate)
+      const today = new Date(targetDate + 'T00:00:00+09:00')
+      const todayMs = today.getTime()
       const dayOfWeek = today.getDay()
 
       for (const sub of subs.rows) {
-        // 간단한 배송일 판별: 주 1회면 매주, 격주면 짝수주, 월 1회면 매월 첫째 주
         const freq = freqDays[sub.frequency] || 7
         let shouldDeliver = false
 
-        if (freq === 7) shouldDeliver = dayOfWeek === 1 // 매주 월요일
-        else if (freq === 14) shouldDeliver = dayOfWeek === 1 && isEvenWeek(today)
-        else if (freq === 28) shouldDeliver = dayOfWeek === 1 && isFirstWeekOfMonth(today)
-
-        // next_payment_at 기준 판별도 추가
+        // 1차 판별: next_payment_at 날짜가 오늘과 일치하면 무조건 배송
         if (sub.next_payment_at) {
-          const nextDate = new Date(sub.next_payment_at)
-          const diff = Math.round((today - nextDate) / (1000 * 60 * 60 * 24))
-          if (diff >= 0 && diff % freq === 0) shouldDeliver = true
+          const nextDateStr = new Date(sub.next_payment_at).toISOString().split('T')[0]
+          if (nextDateStr === targetDate) {
+            shouldDeliver = true
+          } else {
+            // next_payment_at 기준 주기적 배송일 판별
+            const nextDate = new Date(nextDateStr + 'T00:00:00+09:00')
+            const diffDays = Math.round((todayMs - nextDate.getTime()) / (1000 * 60 * 60 * 24))
+            if (diffDays > 0 && diffDays % freq === 0) {
+              shouldDeliver = true
+            }
+          }
+        }
+
+        // 2차 판별: next_payment_at 없으면 요일 기반 폴백
+        if (!shouldDeliver && !sub.next_payment_at) {
+          if (freq === 7) shouldDeliver = dayOfWeek === 1 // 매주 월요일
+          else if (freq === 14) shouldDeliver = dayOfWeek === 1 && isEvenWeek(today)
+          else if (freq === 28) shouldDeliver = dayOfWeek === 1 && isFirstWeekOfMonth(today)
         }
 
         if (!shouldDeliver) continue

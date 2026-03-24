@@ -80,8 +80,10 @@ router.post('/', validate(orderSchema), async (req, res, next) => {
     const subtotal = o.items.reduce((sum, i) => sum + i.quantity * i.unit_price, 0)
     const totalAmount = subtotal + o.shipping_fee - o.discount
 
-    // 주문번호 생성: HH-YYYYMMDD-seq
-    const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '')
+    // 주문번호 생성: HH-YYYYMMDD-seq (KST 기준)
+    const now = new Date()
+    const kstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000)
+    const dateStr = kstNow.toISOString().split('T')[0].replace(/-/g, '')
     const seqRes = await query(
       `SELECT COUNT(*) + 1 AS seq FROM orders WHERE order_number LIKE $1`,
       [`HH-${dateStr}-%`],

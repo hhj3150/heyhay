@@ -32,8 +32,8 @@ export default function DailyMilkPage() {
   const [saveSuccess, setSaveSuccess] = useState(false)
 
   // 납유 단가 (원/L) — system_settings에서 로드, 로딩 전까지 0으로 표시
-  const [dairyPrice, setDairyPrice] = useState(0)
-  const [dairyOverPrice, setDairyOverPrice] = useState(0) // 정상단가 - 초과단가 차액
+  const [dairyPrice, setDairyPrice] = useState(1130)
+  const [dairyExcessPrice, setDairyExcessPrice] = useState(1030) // 초과분 단가 (예: 1030원/L)
   const [dairyQuota, setDairyQuota] = useState(180) // 진흥회 정상유대 기준량
   const [d2oPrice, setD2oPrice] = useState(0)
   const [showPriceSetting, setShowPriceSetting] = useState(false)
@@ -68,10 +68,10 @@ export default function DailyMilkPage() {
     if (settingsRes.success && Array.isArray(settingsRes.data) && settingsRes.data.length > 0) {
       const settingsMap = {}
       settingsRes.data.forEach((s) => { settingsMap[s.key] = s.value })
-      const normalRate = parseInt(settingsMap.dairy_normal_rate) || 0
-      const excessRate = parseInt(settingsMap.dairy_excess_rate) || 0
+      const normalRate = parseInt(settingsMap.dairy_normal_rate) || 1130
+      const excessRate = parseInt(settingsMap.dairy_excess_rate) || 1030
       setDairyPrice(normalRate)
-      setDairyOverPrice(normalRate - excessRate) // 차액 (예: 1130 - 1030 = 100)
+      setDairyExcessPrice(excessRate) // 초과분 단가 (예: 1030원/L)
       setDairyQuota(parseInt(settingsMap.dairy_normal_limit) || 180)
       setD2oPrice(parseInt(settingsMap.d2o_rate) || 0)
     } else if (priceRes.success && priceRes.data) {
@@ -126,13 +126,13 @@ export default function DailyMilkPage() {
   /**
    * 진흥회 납유대금 계산 (차등 단가)
    * 180L까지: 정상 단가 (예: 1,130원/L)
-   * 180L 초과분: 정상 단가 - 100원 (예: 1,030원/L)
+   * 180L 초과분: 초과 단가 (예: 1,030원/L)
    */
   const calcDairyPayment = (liters) => {
     if (liters <= 0) return 0
     const normalL = Math.min(liters, dairyQuota)
     const overL = Math.max(0, liters - dairyQuota)
-    return Math.round(normalL * dairyPrice + overL * (dairyPrice - dairyOverPrice))
+    return Math.round(normalL * dairyPrice + overL * dairyExcessPrice)
   }
 
   // 입력 중 자동 계산: 총 착유량 - D2O = 진흥회
@@ -161,7 +161,7 @@ export default function DailyMilkPage() {
   // 진흥회: 일별 180L 기준 차등 → 월 합계는 일수 × 기준량으로 근사
   const mDairyNormalL = Math.min(mDairyTotal, dairyQuota * mDairyDays)
   const mDairyOverL = Math.max(0, mDairyTotal - mDairyNormalL)
-  const mDairyPayment = Math.round(mDairyNormalL * dairyPrice + mDairyOverL * (dairyPrice - dairyOverPrice))
+  const mDairyPayment = Math.round(mDairyNormalL * dairyPrice + mDairyOverL * dairyExcessPrice)
   const mD2oPayment = Math.round(mD2oTotal * d2oPrice)
 
   const now = new Date()
@@ -363,7 +363,7 @@ export default function DailyMilkPage() {
               </div>
               <div className="text-center p-3 bg-amber-50 rounded-lg">
                 <p className="text-[10px] text-slate-500">초과분 (＞{dairyQuota}L)</p>
-                <p className="text-sm font-bold text-amber-700">{(dairyPrice - dairyOverPrice).toLocaleString()}원/L</p>
+                <p className="text-sm font-bold text-amber-700">{dairyExcessPrice.toLocaleString()}원/L</p>
               </div>
               <div className="text-center p-3 bg-green-50 rounded-lg">
                 <p className="text-[10px] text-slate-500">{mDairyDays}일 총 납유량</p>
@@ -377,7 +377,7 @@ export default function DailyMilkPage() {
                 <p className="text-xl font-black text-green-800">{mDairyPayment.toLocaleString()}원</p>
                 {mDairyOverL > 0 && (
                   <p className="text-[9px] text-slate-500">
-                    정상 {Math.round(mDairyNormalL * dairyPrice).toLocaleString()} + 초과 {Math.round(mDairyOverL * (dairyPrice - dairyOverPrice)).toLocaleString()}
+                    정상 {Math.round(mDairyNormalL * dairyPrice).toLocaleString()} + 초과 {Math.round(mDairyOverL * dairyExcessPrice).toLocaleString()}
                   </p>
                 )}
               </div>

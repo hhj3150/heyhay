@@ -84,6 +84,24 @@ router.get('/demand', async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
+/** GET /partners — 거래처 목록 (별칭) */
+router.get('/partners', async (req, res, next) => {
+  try {
+    const result = await query(`
+      SELECT p.*,
+        (SELECT COUNT(*) FROM b2b_standing_orders bso
+         WHERE bso.partner_id = p.id AND bso.is_active = true) AS active_orders,
+        (SELECT COALESCE(SUM(bso.quantity * bso.unit_price), 0)
+         FROM b2b_standing_orders bso
+         WHERE bso.partner_id = p.id AND bso.is_active = true) AS estimated_monthly
+      FROM b2b_partners p
+      WHERE p.deleted_at IS NULL
+      ORDER BY p.created_at
+    `)
+    res.json(apiResponse(result.rows))
+  } catch (err) { next(err) }
+})
+
 /** GET / — 거래처 목록 */
 router.get('/', async (req, res, next) => {
   try {

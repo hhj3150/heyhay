@@ -67,6 +67,7 @@ export default function OrderBoard() {
   const [newOrder, setNewOrder] = useState({ ...EMPTY_OFFLINE_ORDER })
   const [skuList, setSkuList] = useState([])
   const [skuPrices, setSkuPrices] = useState([]) // 채널별 단가 (sku_prices 테이블)
+  const [priceLoadFailed, setPriceLoadFailed] = useState(false) // 단가 로드 실패 여부
   const [confirmAction, setConfirmAction] = useState(null)
   const [activeTab, setActiveTab] = useState('PENDING') // 모바일 탭 상태
 
@@ -96,11 +97,13 @@ export default function OrderBoard() {
     const grouped = {}
     COLUMNS.forEach((c) => { grouped[c.status] = [] })
 
-    // 각 상태별 주문 + SKU + 채널단가 병렬 조회
+    // 각 상태별 주문 + SKU 병렬 조회 (단가는 실패해도 나머지에 영향 없도록 분리)
+    const pricesPromise = apiGet('/settings/prices').catch(() => ({ success: false }))
+
     const [statsRes, skuRes, pricesRes, ...colResults] = await Promise.all([
       apiGet('/market/orders/stats'),
       apiGet('/factory/skus'),
-      apiGet('/settings/prices'),
+      pricesPromise,
       ...COLUMNS.map((c) => apiGet(`/market/orders?status=${c.status}&limit=50`)),
     ])
 
@@ -113,7 +116,12 @@ export default function OrderBoard() {
     setOrders(grouped)
     if (statsRes.success) setStats(statsRes.data)
     if (skuRes.success) setSkuList(skuRes.data)
-    if (pricesRes.success) setSkuPrices(pricesRes.data)
+    if (pricesRes.success) {
+      setSkuPrices(pricesRes.data)
+      setPriceLoadFailed(false)
+    } else {
+      setPriceLoadFailed(true)
+    }
 
     setLoading(false)
   }, [])
@@ -514,6 +522,13 @@ export default function OrderBoard() {
               </button>
             </div>
             <div className="p-5 space-y-4">
+              {/* 단가 로드 실패 경고 */}
+              {priceLoadFailed && (
+                <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  단가 미설정 — 수동 입력 필요 (가격 데이터를 불러오지 못했습니다)
+                </div>
+              )}
               {/* 주문 채널 */}
               <div>
                 <label className="text-xs font-semibold text-slate-600 mb-1.5 block">주문 경로</label>
