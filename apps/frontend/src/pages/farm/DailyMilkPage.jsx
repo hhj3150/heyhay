@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { apiGet, apiPost } from '@/lib/api'
+import { apiGet, apiPost, apiPut } from '@/lib/api'
 import {
   Milk, TrendingUp, TrendingDown, Factory, Truck, Save,
   CheckCircle2, Calendar, DollarSign, Settings,
@@ -38,6 +38,8 @@ export default function DailyMilkPage() {
   const [d2oPrice, setD2oPrice] = useState(0)
   const [showPriceSetting, setShowPriceSetting] = useState(false)
   const [dairyPriceInput, setDairyPriceInput] = useState('')
+  const [dairyExcessPriceInput, setDairyExcessPriceInput] = useState('')
+  const [dairyQuotaInput, setDairyQuotaInput] = useState('')
   const [d2oPriceInput, setD2oPriceInput] = useState('')
 
   // 월별 정산
@@ -112,12 +114,18 @@ export default function DailyMilkPage() {
   }
 
   const savePrices = async () => {
-    const dp = parseInt(dairyPriceInput) || dairyPrice
-    const d2p = parseInt(d2oPriceInput) || d2oPrice
-    const res = await apiPost('/farm/milking/dairy-price', { dairy_price: dp, d2o_price: d2p })
+    const settings = [
+      { key: 'dairy_normal_rate', value: String(parseInt(dairyPriceInput) || dairyPrice) },
+      { key: 'dairy_excess_rate', value: String(parseInt(dairyExcessPriceInput) || dairyExcessPrice) },
+      { key: 'dairy_normal_limit', value: String(parseInt(dairyQuotaInput) || dairyQuota) },
+      { key: 'd2o_rate', value: String(parseInt(d2oPriceInput) || d2oPrice) },
+    ]
+    const res = await apiPut('/settings/system', settings)
     if (res.success) {
-      setDairyPrice(dp)
-      setD2oPrice(d2p)
+      setDairyPrice(parseInt(dairyPriceInput) || dairyPrice)
+      setDairyExcessPrice(parseInt(dairyExcessPriceInput) || dairyExcessPrice)
+      setDairyQuota(parseInt(dairyQuotaInput) || dairyQuota)
+      setD2oPrice(parseInt(d2oPriceInput) || d2oPrice)
       setShowPriceSetting(false)
       fetchData()
     }
@@ -324,6 +332,8 @@ export default function DailyMilkPage() {
             <button onClick={() => {
               setShowPriceSetting(!showPriceSetting)
               setDairyPriceInput(String(dairyPrice))
+              setDairyExcessPriceInput(String(dairyExcessPrice))
+              setDairyQuotaInput(String(dairyQuota))
               setD2oPriceInput(String(d2oPrice))
             }} className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 px-2 py-1 rounded hover:bg-slate-100">
               <Settings className="w-3.5 h-3.5" /> 단가 설정
@@ -334,14 +344,27 @@ export default function DailyMilkPage() {
           {/* 단가 설정 */}
           {showPriceSetting && (
             <div className="p-4 bg-slate-50 rounded-lg mb-4 space-y-3">
+              <p className="text-xs font-semibold text-slate-600 mb-1">납유 단가 설정 (system_settings에 저장)</p>
               <div className="flex gap-3 items-center">
-                <span className="text-sm text-green-600 font-medium w-20">🏛️ 진흥회</span>
+                <span className="text-sm text-green-600 font-medium w-32">🏛️ 진흥회 정상</span>
                 <Input type="number" className="w-32 h-9 text-right" value={dairyPriceInput}
                   onChange={(e) => setDairyPriceInput(e.target.value)} />
                 <span className="text-sm text-slate-400">원/L</span>
               </div>
               <div className="flex gap-3 items-center">
-                <span className="text-sm text-blue-600 font-medium w-20">🏭 D2O</span>
+                <span className="text-sm text-amber-600 font-medium w-32">🏛️ 초과분 단가</span>
+                <Input type="number" className="w-32 h-9 text-right" value={dairyExcessPriceInput}
+                  onChange={(e) => setDairyExcessPriceInput(e.target.value)} />
+                <span className="text-sm text-slate-400">원/L</span>
+              </div>
+              <div className="flex gap-3 items-center">
+                <span className="text-sm text-green-600 font-medium w-32">🏛️ 기준량 (일)</span>
+                <Input type="number" className="w-32 h-9 text-right" value={dairyQuotaInput}
+                  onChange={(e) => setDairyQuotaInput(e.target.value)} />
+                <span className="text-sm text-slate-400">L/일</span>
+              </div>
+              <div className="flex gap-3 items-center">
+                <span className="text-sm text-blue-600 font-medium w-32">🏭 D2O 단가</span>
                 <Input type="number" className="w-32 h-9 text-right" value={d2oPriceInput}
                   onChange={(e) => setD2oPriceInput(e.target.value)} />
                 <span className="text-sm text-slate-400">원/L</span>
