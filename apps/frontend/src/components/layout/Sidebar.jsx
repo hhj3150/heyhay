@@ -23,7 +23,9 @@ const ROLE_PERMISSIONS = {
 }
 
 const NAV_ITEMS = [
-  { id: 'dashboard', label: '대시보드', icon: LayoutDashboard, path: '/', color: 'text-slate-600' },
+  { id: 'dashboard', label: '오늘의 운영', icon: LayoutDashboard, path: '/', color: 'text-slate-600', children: [
+    { label: '경영 대시보드', icon: BarChart3, path: '/dashboard/overview' },
+  ]},
   { id: 'farm', label: '목장 관리', icon: Milk, path: '/farm', color: 'text-amber-500', children: [
     { label: '오늘 착유량', icon: Milk, path: '/farm/milk' },
   ]},

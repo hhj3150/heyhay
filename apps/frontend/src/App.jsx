@@ -8,6 +8,7 @@ import AppLayout from '@/components/layout/AppLayout'
 import LoadingScreen from '@/components/ui/LoadingScreen'
 
 const LoginPage = lazy(() => import('@/pages/LoginPage'))
+const TodayOpsPage = lazy(() => import('@/pages/TodayOpsPage'))
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'))
 const FarmRoutes = lazy(() => import('@/pages/farm/FarmRoutes'))
 const FactoryRoutes = lazy(() => import('@/pages/factory/FactoryRoutes'))
@@ -23,7 +24,8 @@ export default function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/" element={<AppLayout />}>
-              <Route index element={<ErrorBoundary><DashboardPage /></ErrorBoundary>} />
+              <Route index element={<ErrorBoundary><TodayOpsPage /></ErrorBoundary>} />
+              <Route path="dashboard/overview" element={<ErrorBoundary><DashboardPage /></ErrorBoundary>} />
               <Route path="farm/*" element={<ErrorBoundary><FarmRoutes /></ErrorBoundary>} />
               <Route path="factory/*" element={<ErrorBoundary><FactoryRoutes /></ErrorBoundary>} />
               <Route path="market/*" element={<ErrorBoundary><MarketRoutes /></ErrorBoundary>} />

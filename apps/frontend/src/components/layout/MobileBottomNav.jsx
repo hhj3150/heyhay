@@ -8,7 +8,7 @@ import { Home, Package, Truck, Milk, Bot } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const TABS = [
-  { path: '/', label: '대시보드', icon: Home, exact: true },
+  { path: '/', label: '홈', icon: Home, exact: true },
   { path: '/market/orders', label: '주문', icon: Package },
   { path: '/market/checklist', label: '배송', icon: Truck },
   { path: '/farm/milk', label: '착유', icon: Milk },

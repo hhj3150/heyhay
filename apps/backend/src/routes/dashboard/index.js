@@ -160,6 +160,9 @@ router.post('/ai-report', async (req, res, next) => {
   }
 })
 
+// 오늘의 운영 커맨드센터
+router.use('/', require('./todayOps'))
+
 // AI 음성 대화
 router.use('/', require('./aiChat'))
 
