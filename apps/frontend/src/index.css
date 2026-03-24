@@ -23,4 +23,66 @@
 
 body {
   @apply bg-slate-50 text-slate-800 antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: contain;
+}
+
+/* ─── 모바일 터치 최적화 전역 유틸리티 ─── */
+
+/* momentum 스크롤 */
+.scroll-momentum {
+  -webkit-overflow-scrolling: touch;
+  overflow-y: auto;
+}
+
+/* 가로 snap 스크롤 */
+.snap-scroll-x {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.snap-scroll-x::-webkit-scrollbar {
+  display: none;
+}
+.snap-scroll-x > * {
+  scroll-snap-align: start;
+  flex-shrink: 0;
+}
+
+/* 터치 피드백 */
+.touch-feedback {
+  transition: transform 0.1s ease;
+}
+.touch-feedback:active {
+  transform: scale(0.97);
+}
+
+/* 최소 터치 영역 보장 */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* sticky 하단 바 */
+.sticky-bottom {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+}
+
+/* 모바일 카드 뷰 전환 */
+@media (max-width: 767px) {
+  .mobile-card-view table,
+  .mobile-card-view thead,
+  .mobile-card-view tbody,
+  .mobile-card-view th,
+  .mobile-card-view td,
+  .mobile-card-view tr {
+    display: block;
+  }
+  .mobile-card-view thead {
+    display: none;
+  }
 }

@@ -7,49 +7,24 @@
  * - 마크다운 스타일 메시지 렌더링 (bold, 줄바꿈, 이모지)
  * - 어시스턴트 타이핑 효과
  * - 주문 확인 카드 UI (상품 테이블 + 버튼)
- * - 카테고리별 제안 문구
+ * - 착유량 입력 액션 (복명복창 → 확인 → POST)
+ * - 페이지 네비게이션 액션 (AI 응답 → 자동 이동)
+ * - 페이지 컨텍스트 인식 제안 문구
  * - 반응형 모바일 전체화면
  * - 대화 초기화
  */
 import { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { apiPost } from '@/lib/api'
 import {
   Mic, MicOff, X, Volume2, Loader2, MessageCircle,
-  Search, ShoppingCart, Settings, RotateCcw, Check, XCircle,
+  RotateCcw,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-
-// ─── 카테고리별 제안 문구 ────────────────────────────────────
-const SUGGESTION_GROUPS = [
-  {
-    label: '조회',
-    icon: Search,
-    items: [
-      '오늘 전체 현황 요약해줘',
-      '오늘 납유량은?',
-      '이번달 납유대금은?',
-      '구독자 몇 명이야?',
-    ],
-  },
-  {
-    label: '주문',
-    icon: ShoppingCart,
-    items: [
-      '밀크카페 우유750 10개 주문해줘',
-      '미처리 주문 있어?',
-    ],
-  },
-  {
-    label: '관리',
-    icon: Settings,
-    items: [
-      '이번주 분만예정 개체는?',
-      '재고 부족 품목 알려줘',
-    ],
-  },
-]
+import { DEFAULT_SUGGESTION_GROUPS, getContextChips } from './ai-assistant/constants'
+import { OrderConfirmCard, MilkInputCard } from './ai-assistant/ActionCards'
 
 // ─── ReactMarkdown 커스텀 컴포넌트 ───────────────────────────
 const markdownComponents = {
@@ -135,90 +110,8 @@ const MessageBubble = memo(function MessageBubble({ role, content, isLatestAssis
   )
 })
 
-// ─── 주문 확인 카드 ─────────────────────────────────────────
-const OrderConfirmCard = memo(function OrderConfirmCard({ order, onConfirm, onCancel }) {
-  if (!order) return null
-
-  const items = order.items || [order]
-  const totalAmount = items.reduce((sum, item) => {
-    const price = item.unit_price ?? item.unitPrice ?? 0
-    const qty = item.quantity ?? 0
-    return sum + price * qty
-  }, 0)
-
-  return (
-    <div className="mx-2 my-2 border border-violet-200 rounded-xl overflow-hidden bg-white shadow-sm">
-      {/* 카드 헤더 */}
-      <div className="bg-violet-50 px-4 py-2.5 border-b border-violet-100 flex items-center gap-2">
-        <ShoppingCart className="w-4 h-4 text-violet-600" />
-        <span className="text-sm font-semibold text-violet-700">주문 확인</span>
-      </div>
-
-      {/* 상품 테이블 */}
-      <div className="px-4 py-3">
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="text-slate-400 border-b">
-              <th className="text-left pb-2 font-medium">상품명</th>
-              <th className="text-right pb-2 font-medium">수량</th>
-              <th className="text-right pb-2 font-medium">단가</th>
-              <th className="text-right pb-2 font-medium">소계</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item, idx) => {
-              const price = item.unit_price ?? item.unitPrice ?? 0
-              const qty = item.quantity ?? 0
-              return (
-                <tr key={idx} className="border-b border-slate-50 last:border-0">
-                  <td className="py-2 text-slate-700 font-medium">
-                    {item.product_name ?? item.productName ?? item.name ?? '상품'}
-                  </td>
-                  <td className="py-2 text-right text-slate-600">{qty}</td>
-                  <td className="py-2 text-right text-slate-600">
-                    {price.toLocaleString()}원
-                  </td>
-                  <td className="py-2 text-right text-slate-800 font-semibold">
-                    {(price * qty).toLocaleString()}원
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-
-        {/* 합계 */}
-        <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-100">
-          <span className="text-xs text-slate-500">합계</span>
-          <span className="text-base font-bold text-violet-700">
-            {totalAmount.toLocaleString()}원
-          </span>
-        </div>
-      </div>
-
-      {/* 확인/취소 버튼 */}
-      <div className="px-4 pb-3 flex gap-2">
-        <button
-          onClick={onCancel}
-          className="flex-1 h-10 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 active:scale-[0.97] transition-all flex items-center justify-center gap-1.5"
-        >
-          <XCircle className="w-4 h-4" />
-          취소
-        </button>
-        <button
-          onClick={onConfirm}
-          className="flex-1 h-10 rounded-lg bg-violet-500 text-white text-sm font-medium hover:bg-violet-600 active:scale-[0.97] transition-all flex items-center justify-center gap-1.5 shadow-sm"
-        >
-          <Check className="w-4 h-4" />
-          주문하기
-        </button>
-      </div>
-    </div>
-  )
-})
-
-// ─── 제안 문구 패널 ─────────────────────────────────────────
-const SuggestionsPanel = memo(function SuggestionsPanel({ onSelect }) {
+// ─── 제안 문구 패널 (페이지 컨텍스트 인식) ──────────────────
+const SuggestionsPanel = memo(function SuggestionsPanel({ onSelect, contextChips }) {
   return (
     <div className="text-center py-4 px-2">
       <div className="w-14 h-14 mx-auto mb-3 rounded-full bg-gradient-to-br from-violet-100 to-indigo-100 flex items-center justify-center">
@@ -228,8 +121,28 @@ const SuggestionsPanel = memo(function SuggestionsPanel({ onSelect }) {
         마이크 버튼을 누르고 말씀하거나, 아래 질문을 선택하세요
       </p>
 
+      {/* 페이지 컨텍스트 빠른 질문 칩 (가로 스크롤 + 터치 피드백) */}
+      {contextChips.length > 0 && (
+        <div className="mb-4">
+          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2 text-left px-2">
+            이 페이지에서 자주 쓰는 질문
+          </p>
+          <div className="flex gap-2 overflow-x-auto pb-2 px-1 scrollbar-hide snap-x snap-mandatory">
+            {contextChips.map((chip) => (
+              <button
+                key={chip}
+                onClick={() => onSelect(chip)}
+                className="flex-shrink-0 snap-start text-[11px] text-violet-600 bg-violet-50 hover:bg-violet-100 active:bg-violet-200 active:scale-[0.97] px-3 py-2 rounded-full transition-all whitespace-nowrap border border-violet-100"
+              >
+                {chip}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="space-y-3 text-left">
-        {SUGGESTION_GROUPS.map((group) => {
+        {DEFAULT_SUGGESTION_GROUPS.map((group) => {
           const IconComp = group.icon
           return (
             <div key={group.label}>
@@ -260,6 +173,9 @@ const SuggestionsPanel = memo(function SuggestionsPanel({ onSelect }) {
 
 // ─── 메인 컴포넌트 ───────────────────────────────────────────
 export default function AiVoiceAssistant() {
+  const navigate = useNavigate()
+  const location = useLocation()
+
   const [isOpen, setIsOpen] = useState(false)
   const [isListening, setIsListening] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
@@ -272,10 +188,17 @@ export default function AiVoiceAssistant() {
     } catch { return [] }
   })
   const [pendingOrder, setPendingOrder] = useState(null)
+  const [pendingAction, setPendingAction] = useState(null)
   const [latestAssistantIdx, setLatestAssistantIdx] = useState(-1)
 
   const recognitionRef = useRef(null)
   const messagesEndRef = useRef(null)
+
+  // 페이지 컨텍스트별 빠른 질문 칩
+  const contextChips = useMemo(
+    () => getContextChips(location.pathname),
+    [location.pathname]
+  )
 
   // 브라우저 음성 지원 확인
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
@@ -294,7 +217,7 @@ export default function AiVoiceAssistant() {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
     }
-  }, [messages, pendingOrder])
+  }, [messages, pendingOrder, pendingAction])
 
   // sessionStorage에 대화 저장 (최대 20개)
   useEffect(() => {
@@ -370,7 +293,76 @@ export default function AiVoiceAssistant() {
     setIsListening(false)
   }, [])
 
-  // ── 주문 확인 (버튼) ──
+  // ── AI 응답의 액션 처리 ──
+  const handleActionFromResponse = useCallback((action) => {
+    if (!action || !action.type) return false
+
+    if (action.type === 'NAVIGATE') {
+      // 네비게이션: 1초 후 자동 이동 (메시지 확인 시간 확보)
+      setTimeout(() => {
+        navigate(action.path)
+        setIsOpen(false)
+      }, 1000)
+      return true
+    }
+
+    if (action.type === 'MILK_INPUT') {
+      // 착유량 입력: pendingAction에 저장 → 확인 카드 표시
+      setPendingAction({ type: 'MILK_INPUT', data: action.data })
+      return true
+    }
+
+    return false
+  }, [navigate])
+
+  // ── 착유량 입력 확인/취소 ──
+  const handleConfirmMilkInput = useCallback(async () => {
+    if (!pendingAction || pendingAction.type !== 'MILK_INPUT') return
+
+    const milkData = pendingAction.data
+    const newMessages = [...messages, { role: 'user', content: '착유량 입력 확인합니다' }]
+    setMessages(newMessages)
+    setIsLoading(true)
+
+    try {
+      const payload = {
+        total_l: milkData.total_l,
+        dairy_assoc_l: milkData.dairy_assoc_l ?? 0,
+        d2o_l: milkData.d2o_l ?? 0,
+      }
+      const res = await apiPost('/farm/milking/daily-total', payload)
+      if (res.success) {
+        const answer = `착유량 ${milkData.total_l}L 입력 완료했습니다.`
+        const updatedMessages = [...newMessages, { role: 'assistant', content: answer }]
+        setMessages(updatedMessages)
+        setLatestAssistantIdx(updatedMessages.length - 1)
+        speak(answer)
+      } else {
+        const errMsg = res.error?.message || '착유량 입력 중 오류가 발생했습니다.'
+        const updatedMessages = [...newMessages, { role: 'assistant', content: errMsg }]
+        setMessages(updatedMessages)
+        setLatestAssistantIdx(updatedMessages.length - 1)
+      }
+    } catch {
+      const updatedMessages = [...newMessages, { role: 'assistant', content: '착유량 입력 중 오류가 발생했습니다.' }]
+      setMessages(updatedMessages)
+      setLatestAssistantIdx(updatedMessages.length - 1)
+    }
+
+    setPendingAction(null)
+    setIsLoading(false)
+  }, [pendingAction, messages, speak])
+
+  const handleCancelMilkInput = useCallback(() => {
+    const cancelled = '착유량 입력을 취소했습니다.'
+    const updatedMessages = [...messages, { role: 'assistant', content: cancelled }]
+    setMessages(updatedMessages)
+    setLatestAssistantIdx(updatedMessages.length - 1)
+    setPendingAction(null)
+    speak(cancelled)
+  }, [messages, speak])
+
+  // ── 주문 확인/취소 (버튼) ──
   const handleConfirmOrder = useCallback(async () => {
     if (!pendingOrder) return
 
@@ -411,9 +403,22 @@ export default function AiVoiceAssistant() {
     if (!text.trim()) return
     setTranscript('')
 
+    // 착유량 입력 대기 중 음성 확인
+    const confirmWords = ['확인', '넣어', '입력해', '네', '응']
+    if (pendingAction && pendingAction.type === 'MILK_INPUT' && confirmWords.some((w) => text.includes(w))) {
+      handleConfirmMilkInput()
+      return
+    }
+
+    // 착유량 입력 대기 중 취소
+    if (pendingAction && (text.includes('취소') || text.includes('아니'))) {
+      handleCancelMilkInput()
+      return
+    }
+
     // 주문 대기 중 음성 확인
-    const confirmWords = ['주문해', '확인', '넣어', '등록해', '네', '응']
-    if (pendingOrder && confirmWords.some((w) => text.includes(w))) {
+    const orderConfirmWords = ['주문해', '확인', '넣어', '등록해', '네', '응']
+    if (pendingOrder && orderConfirmWords.some((w) => text.includes(w))) {
       const newMessages = [...messages, { role: 'user', content: text }]
       setMessages(newMessages)
       setIsLoading(true)
@@ -460,20 +465,18 @@ export default function AiVoiceAssistant() {
       if (res.success) {
         const answer = res.data.answer
 
-        if (res.data.order_data) {
-          setPendingOrder(res.data.order_data)
-          const updatedMessages = [
-            ...newMessages,
-            { role: 'assistant', content: answer },
-          ]
-          setMessages(updatedMessages)
-          setLatestAssistantIdx(updatedMessages.length - 1)
-        } else {
-          const updatedMessages = [...newMessages, { role: 'assistant', content: answer }]
-          setMessages(updatedMessages)
-          setLatestAssistantIdx(updatedMessages.length - 1)
+        // 액션 처리 (네비게이션, 착유량 입력)
+        if (res.data.action) {
+          handleActionFromResponse(res.data.action)
         }
 
+        if (res.data.order_data) {
+          setPendingOrder(res.data.order_data)
+        }
+
+        const updatedMessages = [...newMessages, { role: 'assistant', content: answer }]
+        setMessages(updatedMessages)
+        setLatestAssistantIdx(updatedMessages.length - 1)
         speak(answer)
       } else {
         const updatedMessages = [...newMessages, { role: 'assistant', content: '죄송합니다, 응답을 생성할 수 없습니다.' }]
@@ -487,12 +490,13 @@ export default function AiVoiceAssistant() {
     }
 
     setIsLoading(false)
-  }, [messages, pendingOrder, speak])
+  }, [messages, pendingOrder, pendingAction, speak, handleActionFromResponse, handleConfirmMilkInput, handleCancelMilkInput])
 
   // ── 대화 초기화 ──
   const resetConversation = useCallback(() => {
     setMessages([])
     setPendingOrder(null)
+    setPendingAction(null)
     setTranscript('')
     setLatestAssistantIdx(-1)
     sessionStorage.removeItem('ai_chat_messages')
@@ -534,14 +538,18 @@ export default function AiVoiceAssistant() {
     <div
       className={cn(
         'fixed z-50 bg-white flex flex-col overflow-hidden transition-all',
-        // 모바일: 전체 화면
+        // 모바일: 전체 화면 (safe-area 대응)
         'inset-0',
         // 데스크탑: 우측 하단 카드
         'sm:inset-auto sm:bottom-6 sm:right-6 sm:w-[400px] sm:max-h-[600px] sm:rounded-2xl sm:shadow-2xl sm:border',
       )}
+      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       {/* ── 헤더 ── */}
-      <div className="bg-gradient-to-r from-violet-500 to-indigo-600 text-white px-4 py-3 flex items-center justify-between shrink-0">
+      <div
+        className="bg-gradient-to-r from-violet-500 to-indigo-600 text-white px-4 py-3 flex items-center justify-between shrink-0"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
+      >
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
             <MessageCircle className="w-4 h-4" />
@@ -554,7 +562,6 @@ export default function AiVoiceAssistant() {
           </div>
         </div>
         <div className="flex items-center gap-1">
-          {/* 대화 초기화 */}
           {messages.length > 0 && (
             <button
               onClick={resetConversation}
@@ -579,7 +586,22 @@ export default function AiVoiceAssistant() {
       <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
         {/* 제안 문구 (빈 상태) */}
         {messages.length === 0 && (
-          <SuggestionsPanel onSelect={sendMessage} />
+          <SuggestionsPanel onSelect={sendMessage} contextChips={contextChips} />
+        )}
+
+        {/* 대화 시작 후 페이지 컨텍스트 칩 (가로 스크롤) */}
+        {messages.length > 0 && contextChips.length > 0 && !isLoading && (
+          <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide snap-x snap-mandatory">
+            {contextChips.map((chip) => (
+              <button
+                key={chip}
+                onClick={() => sendMessage(chip)}
+                className="flex-shrink-0 snap-start text-[10px] text-violet-500 bg-violet-50 hover:bg-violet-100 active:bg-violet-200 active:scale-[0.97] px-2.5 py-1.5 rounded-full transition-all whitespace-nowrap border border-violet-100"
+              >
+                {chip}
+              </button>
+            ))}
+          </div>
         )}
 
         {/* 메시지 목록 */}
@@ -598,6 +620,15 @@ export default function AiVoiceAssistant() {
             order={pendingOrder}
             onConfirm={handleConfirmOrder}
             onCancel={handleCancelOrder}
+          />
+        )}
+
+        {/* 착유량 입력 확인 카드 */}
+        {pendingAction && pendingAction.type === 'MILK_INPUT' && !isLoading && (
+          <MilkInputCard
+            data={pendingAction.data}
+            onConfirm={handleConfirmMilkInput}
+            onCancel={handleCancelMilkInput}
           />
         )}
 
@@ -625,10 +656,10 @@ export default function AiVoiceAssistant() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* ── 하단: 입력 영역 ── */}
+      {/* ── 하단: 입력 영역 (키보드 대응) ── */}
       <div className="border-t bg-white p-3 shrink-0">
         <div className="flex items-center gap-2">
-          {/* 음성 입력 버튼 */}
+          {/* 음성 입력 버튼 — 모바일에서 더 크게 (w-14 h-14) */}
           {hasSpeech && (
             <button
               onMouseDown={startListening}
@@ -636,14 +667,17 @@ export default function AiVoiceAssistant() {
               onTouchStart={startListening}
               onTouchEnd={stopListening}
               className={cn(
-                'w-12 h-12 rounded-full flex items-center justify-center transition-all shrink-0',
+                'w-14 h-14 rounded-full flex items-center justify-center transition-all shrink-0',
                 isListening
-                  ? 'bg-red-500 text-white shadow-lg scale-110 animate-pulse'
+                  ? 'bg-red-500 text-white shadow-lg shadow-red-200 scale-110'
                   : 'bg-violet-100 text-violet-600 hover:bg-violet-200 active:scale-95',
               )}
               aria-label="음성으로 질문하기"
             >
-              {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+              {isListening
+                ? <MicOff className="w-6 h-6 animate-pulse" />
+                : <Mic className="w-6 h-6" />
+              }
             </button>
           )}
 
@@ -676,7 +710,7 @@ export default function AiVoiceAssistant() {
         </div>
 
         {isListening && (
-          <p className="text-[10px] text-red-500 text-center mt-1.5 animate-pulse">
+          <p className="text-[10px] text-red-500 text-center mt-1.5 animate-pulse font-medium">
             듣고 있습니다... 버튼에서 손을 떼면 전송됩니다
           </p>
         )}

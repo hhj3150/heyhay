@@ -10,6 +10,9 @@ import { Button } from '@/components/ui/button'
 import { apiGet, apiPut, apiPost } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import usePullToRefresh from '@/hooks/usePullToRefresh'
+import PullToRefreshIndicator from '@/components/mobile/PullToRefreshIndicator'
+import SwipeableItem from '@/components/mobile/SwipeableItem'
 import {
   AlertTriangle, Bell, CheckCircle2, Package, Truck, Milk,
   ChevronRight, ChevronDown, Clock, RefreshCw, Boxes, CreditCard,
@@ -223,6 +226,11 @@ export default function TodayOpsPage() {
     }
   }, [fetchData])
 
+  // 풀투리프레시
+  const { pullDistance, isRefreshing, handlers: pullHandlers } = usePullToRefresh({
+    onRefresh: fetchData,
+  })
+
   if (loading) {
     return <LoadingSkeleton />
   }
@@ -231,7 +239,13 @@ export default function TodayOpsPage() {
   const progressPercent = progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0
 
   return (
-    <div className="max-w-3xl mx-auto space-y-4 pb-4">
+    <div
+      className="max-w-3xl mx-auto space-y-3 pb-28 px-3 sm:px-0"
+      {...pullHandlers}
+    >
+      {/* 풀투리프레시 인디케이터 */}
+      <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
+
       {/* 1. 헤더 — 날짜 + 진행률 */}
       <HeaderSection
         date={date}
@@ -241,7 +255,7 @@ export default function TodayOpsPage() {
         onRefresh={fetchData}
       />
 
-      {/* 2. 긴급 액션 카드 */}
+      {/* 2. 긴급 액션 카드 — 가로 snap 스크롤 */}
       <UrgentSection
         urgentActions={urgentActions}
         alerts={alerts}
@@ -260,8 +274,8 @@ export default function TodayOpsPage() {
         onShip={handleShip}
       />
 
-      {/* 5. 하단 요약 */}
-      <SummarySection summary={summary} production={production} />
+      {/* 5. 하단 요약 — sticky bottom bar */}
+      <StickyBottomSummary summary={summary} production={production} />
     </div>
   )
 }
@@ -273,17 +287,17 @@ export default function TodayOpsPage() {
 /** 헤더: 날짜 + 진행률 바 */
 function HeaderSection({ date, progressPercent, progress, milkEntered, onRefresh }) {
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold text-slate-800 leading-tight">
+          <h1 className="text-base sm:text-lg font-bold text-slate-800 leading-tight">
             {formatKoreanDate(date)}
           </h1>
-          <p className="text-sm text-slate-500 mt-0.5">오늘의 운영</p>
+          <p className="text-xs text-slate-500 mt-0.5">오늘의 운영</p>
         </div>
         <button
           onClick={onRefresh}
-          className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-white transition-colors"
+          className="p-2.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-white transition-colors touch-target touch-feedback"
           aria-label="새로고침"
         >
           <RefreshCw className="w-5 h-5" />
@@ -292,7 +306,7 @@ function HeaderSection({ date, progressPercent, progress, milkEntered, onRefresh
 
       {/* 진행률 바 */}
       <div className="bg-white rounded-xl p-3 shadow-sm border border-slate-100">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-1.5">
           <span className="text-sm font-semibold text-slate-700">
             {progressPercent}% 완료
           </span>
@@ -324,7 +338,7 @@ function HeaderSection({ date, progressPercent, progress, milkEntered, onRefresh
   )
 }
 
-/** 긴급 액션 카드 + 알림 */
+/** 긴급 액션 카드 + 알림 — 가로 snap 스크롤 */
 function UrgentSection({ urgentActions, alerts, milkEntered, navigate }) {
   const allItems = [
     ...(!milkEntered
@@ -343,7 +357,7 @@ function UrgentSection({ urgentActions, alerts, milkEntered, navigate }) {
   if (allItems.length === 0) {
     return (
       <Card className="border-emerald-200 bg-emerald-50">
-        <CardContent className="p-4 flex items-center gap-3">
+        <CardContent className="p-3 flex items-center gap-3">
           <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
           <p className="text-sm font-medium text-emerald-700">긴급 사항 없음 — 순조롭게 운영 중</p>
         </CardContent>
@@ -357,42 +371,56 @@ function UrgentSection({ urgentActions, alerts, milkEntered, navigate }) {
         <CircleAlert className="w-4 h-4 text-red-500" />
         긴급 액션
       </h2>
-      {allItems.map((item) => {
-        const isDanger = item.type === 'danger'
-        return (
-          <button
-            key={item.id}
-            onClick={() => item.path && navigate(item.path)}
-            className={cn(
-              'w-full text-left rounded-xl p-3.5 border-l-4 transition-colors',
-              'active:scale-[0.98] min-h-[48px]',
-              isDanger
-                ? 'border-l-red-500 bg-red-50 hover:bg-red-100'
-                : 'border-l-amber-500 bg-amber-50 hover:bg-amber-100',
-            )}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                {isDanger
-                  ? <AlertTriangle className="w-4.5 h-4.5 text-red-500 shrink-0" />
-                  : <Bell className="w-4.5 h-4.5 text-amber-500 shrink-0" />}
-                <div>
-                  <p className={cn('text-sm font-semibold', isDanger ? 'text-red-800' : 'text-amber-800')}>
-                    {item.label}
-                  </p>
-                  {item.description && (
-                    <p className={cn('text-xs mt-0.5', isDanger ? 'text-red-600' : 'text-amber-600')}>
-                      {item.description}
-                    </p>
-                  )}
-                </div>
-              </div>
-              {item.path && <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />}
-            </div>
-          </button>
-        )
-      })}
+      {/* 가로 snap 스크롤 (2개 이상일 때) */}
+      {allItems.length >= 2 ? (
+        <div className="snap-scroll-x gap-2 -mx-3 px-3 pb-1">
+          {allItems.map((item) => (
+            <UrgentCard key={item.id} item={item} navigate={navigate} isSnap />
+          ))}
+        </div>
+      ) : (
+        allItems.map((item) => (
+          <UrgentCard key={item.id} item={item} navigate={navigate} />
+        ))
+      )}
     </div>
+  )
+}
+
+/** 긴급 액션 단일 카드 */
+function UrgentCard({ item, navigate, isSnap = false }) {
+  const isDanger = item.type === 'danger'
+  return (
+    <button
+      onClick={() => item.path && navigate(item.path)}
+      className={cn(
+        'text-left rounded-xl p-3 border-l-4 transition-colors touch-feedback',
+        'min-h-[48px]',
+        isDanger
+          ? 'border-l-red-500 bg-red-50 hover:bg-red-100'
+          : 'border-l-amber-500 bg-amber-50 hover:bg-amber-100',
+        isSnap ? 'w-[85vw] max-w-[340px]' : 'w-full',
+      )}
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          {isDanger
+            ? <AlertTriangle className="w-4.5 h-4.5 text-red-500 shrink-0" />
+            : <Bell className="w-4.5 h-4.5 text-amber-500 shrink-0" />}
+          <div>
+            <p className={cn('text-sm font-semibold', isDanger ? 'text-red-800' : 'text-amber-800')}>
+              {item.label}
+            </p>
+            {item.description && (
+              <p className={cn('text-xs mt-0.5', isDanger ? 'text-red-600' : 'text-amber-600')}>
+                {item.description}
+              </p>
+            )}
+          </div>
+        </div>
+        {item.path && <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />}
+      </div>
+    </button>
   )
 }
 
@@ -408,13 +436,13 @@ function ProductionSection({ production }) {
 
   return (
     <Card>
-      <CardHeader className="pb-2">
+      <CardHeader className="pb-2 px-3">
         <CardTitle className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
           <Package className="w-4 h-4 text-blue-500" />
           {label || '생산 계획'}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-2 px-3 pb-3">
         {/* SKU별 생산 수요 + 드릴다운 */}
         {items.length > 0 ? (
           <div className="space-y-2">
@@ -422,16 +450,16 @@ function ProductionSection({ production }) {
               const isExpanded = expandedSku === item.sku
               return (
                 <div key={item.sku} className="bg-slate-50 rounded-lg overflow-hidden">
-                  {/* 클릭 가능한 헤더 */}
+                  {/* 클릭 가능한 헤더 — 44px 터치 영역 */}
                   <button
                     onClick={() => toggleSku(item.sku)}
-                    className="w-full text-left p-3 active:bg-slate-100 transition-colors"
+                    className="w-full text-left p-3 touch-feedback touch-target"
                   >
                     <div className="flex items-center justify-between mb-1.5">
                       <div className="flex items-center gap-1.5">
                         {isExpanded
-                          ? <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          : <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
+                          ? <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+                          : <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />}
                         <span className="text-sm font-medium text-slate-800">{item.sku}</span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -442,7 +470,7 @@ function ProductionSection({ production }) {
                       </div>
                     </div>
                     {/* 수량 내역 가로 막대 */}
-                    <div className="flex gap-1 h-2.5 rounded-full overflow-hidden bg-slate-200">
+                    <div className="flex gap-1 h-3 rounded-full overflow-hidden bg-slate-200">
                       {item.subscription > 0 && (
                         <div
                           className="bg-purple-500 rounded-full"
@@ -577,13 +605,13 @@ function BreakdownDetail({ breakdown }) {
   )
 }
 
-/** 배송 실행 체크리스트 */
+/** 배송 실행 체크리스트 — 스와이프 액션 + 큰 버튼 */
 function DeliverySection({ deliveries, processingIds, onPack, onShip }) {
   const { total, shipped, pending, items, label } = deliveries
 
   return (
     <Card>
-      <CardHeader className="pb-2">
+      <CardHeader className="pb-2 px-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
             <Truck className="w-4 h-4 text-emerald-500" />
@@ -598,7 +626,7 @@ function DeliverySection({ deliveries, processingIds, onPack, onShip }) {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="space-y-2 px-3 pb-3">
         {items.length === 0 && (
           <p className="text-sm text-slate-400 text-center py-4">오늘 배송 건 없음</p>
         )}
@@ -608,115 +636,143 @@ function DeliverySection({ deliveries, processingIds, onPack, onShip }) {
           const typeStyle = ORDER_TYPE_STYLE[item.orderType] || ORDER_TYPE_STYLE.order
           const isProcessing = Boolean(processingIds[item.orderId])
 
+          // 스와이프 액션 영역
+          const swipeLeftAction = !isCompleted && !isPacked ? (
+            <div className="bg-blue-500 h-full w-full flex items-center justify-center rounded-r-xl">
+              <div className="text-white text-center">
+                <Package className="w-5 h-5 mx-auto mb-0.5" />
+                <span className="text-[10px] font-bold">포장</span>
+              </div>
+            </div>
+          ) : !isCompleted && isPacked ? (
+            <div className="bg-emerald-500 h-full w-full flex items-center justify-center rounded-r-xl">
+              <div className="text-white text-center">
+                <Send className="w-5 h-5 mx-auto mb-0.5" />
+                <span className="text-[10px] font-bold">발송</span>
+              </div>
+            </div>
+          ) : null
+
           return (
-            <div
+            <SwipeableItem
               key={item.orderId}
-              className={cn(
-                'rounded-xl border p-3.5 transition-all',
-                isCompleted
-                  ? 'bg-slate-50 border-slate-200 opacity-70'
-                  : 'bg-white border-slate-200',
-              )}
+              rightAction={swipeLeftAction}
             >
-              {/* 상단: 고객명 + 태그 */}
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className={cn(
-                      'text-sm font-semibold',
-                      isCompleted ? 'line-through text-slate-400' : 'text-slate-800',
-                    )}>
-                      {item.customerName}
-                    </span>
-                    <span className={cn(
-                      'text-[10px] px-1.5 py-0.5 rounded-full font-medium',
-                      typeStyle.bg, typeStyle.text,
-                    )}>
-                      {typeStyle.label}
-                    </span>
+              <div
+                className={cn(
+                  'rounded-xl border p-3 transition-all',
+                  isCompleted
+                    ? 'bg-slate-50 border-slate-200 opacity-70'
+                    : 'bg-white border-slate-200',
+                )}
+              >
+                {/* 상단: 고객명 + 태그 */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={cn(
+                        'text-sm font-semibold',
+                        isCompleted ? 'line-through text-slate-400' : 'text-slate-800',
+                      )}>
+                        {item.customerName}
+                      </span>
+                      <span className={cn(
+                        'text-[10px] px-1.5 py-0.5 rounded-full font-medium',
+                        typeStyle.bg, typeStyle.text,
+                      )}>
+                        {typeStyle.label}
+                      </span>
+                    </div>
+                    {/* 상품 목록 */}
+                    <p className="text-xs text-slate-500 mt-1 truncate">
+                      {item.itemDetails
+                        ? item.itemDetails.map((d) => `${d.sku_code}×${d.quantity}`).join(', ')
+                        : item.products}
+                    </p>
+                    {/* 주소 */}
+                    <p className="text-xs text-slate-400 mt-0.5 truncate">
+                      {item.address}
+                    </p>
                   </div>
-                  {/* 상품 목록 — 제품 상세 표시 */}
-                  <p className="text-xs text-slate-500 mt-1 truncate">
-                    {item.itemDetails
-                      ? item.itemDetails.map((d) => `${d.sku_code}×${d.quantity}`).join(', ')
-                      : item.products}
-                  </p>
-                  {/* 주소 */}
-                  <p className="text-xs text-slate-400 mt-0.5 truncate">
-                    {item.address}
-                  </p>
+
+                  {/* 상태 표시 */}
+                  {isCompleted && (
+                    <div className="flex items-center gap-1 text-xs text-emerald-600 shrink-0">
+                      <CheckCircle2 className="w-4 h-4" />
+                      <div className="text-right">
+                        <p className="font-medium">발송완료</p>
+                        {item.trackingNumber && (
+                          <p className="text-[10px] text-slate-400">{item.trackingNumber}</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* 상태 표시 */}
-                {isCompleted && (
-                  <div className="flex items-center gap-1 text-xs text-emerald-600 shrink-0">
-                    <CheckCircle2 className="w-4 h-4" />
-                    <div className="text-right">
-                      <p className="font-medium">발송완료</p>
-                      {item.trackingNumber && (
-                        <p className="text-[10px] text-slate-400">{item.trackingNumber}</p>
-                      )}
-                    </div>
+                {/* 아이스팩/박스 태그 */}
+                {item.packagingNote && (
+                  <div className="flex gap-1.5 mt-2">
+                    {item.packagingNote.split(',').map((note) => (
+                      <span
+                        key={note.trim()}
+                        className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded"
+                      >
+                        {note.trim()}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* 액션 버튼 — 큰 터치 영역 */}
+                {!isCompleted && (
+                  <div className="flex gap-2 mt-3">
+                    {!isPacked ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 h-12 text-sm font-semibold touch-feedback"
+                        onClick={() => onPack(item.orderId)}
+                        disabled={isProcessing}
+                      >
+                        <Package className="w-4 h-4 mr-1.5" />
+                        {isProcessing && processingIds[item.orderId] === 'packing' ? '처리중...' : '포장완료'}
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        className="flex-1 h-12 text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 touch-feedback"
+                        onClick={() => onShip(item.orderId)}
+                        disabled={isProcessing}
+                      >
+                        <Send className="w-4 h-4 mr-1.5" />
+                        {isProcessing && processingIds[item.orderId] === 'shipping' ? '처리중...' : '발송처리'}
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>
-
-              {/* 아이스팩/박스 태그 */}
-              {item.packagingNote && (
-                <div className="flex gap-1.5 mt-2">
-                  {item.packagingNote.split(',').map((note) => (
-                    <span
-                      key={note.trim()}
-                      className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded"
-                    >
-                      {note.trim()}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {/* 액션 버튼 */}
-              {!isCompleted && (
-                <div className="flex gap-2 mt-3">
-                  {!isPacked ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="flex-1 min-h-[44px] text-xs font-semibold"
-                      onClick={() => onPack(item.orderId)}
-                      disabled={isProcessing}
-                    >
-                      <Package className="w-3.5 h-3.5 mr-1.5" />
-                      {isProcessing && processingIds[item.orderId] === 'packing' ? '처리중...' : '포장완료'}
-                    </Button>
-                  ) : (
-                    <Button
-                      size="sm"
-                      className="flex-1 min-h-[44px] text-xs font-semibold bg-emerald-600 hover:bg-emerald-700"
-                      onClick={() => onShip(item.orderId)}
-                      disabled={isProcessing}
-                    >
-                      <Send className="w-3.5 h-3.5 mr-1.5" />
-                      {isProcessing && processingIds[item.orderId] === 'shipping' ? '처리중...' : '발송처리'}
-                    </Button>
-                  )}
-                </div>
-              )}
-            </div>
+            </SwipeableItem>
           )
         })}
+
+        {/* 스와이프 힌트 (미발송 건이 있을 때) */}
+        {pending > 0 && items.length > 0 && (
+          <p className="text-[10px] text-slate-400 text-center pt-1">
+            ← 왼쪽으로 밀어 빠른 처리
+          </p>
+        )}
       </CardContent>
     </Card>
   )
 }
 
-/** 하단 요약 스트립 */
-function SummarySection({ summary, production }) {
+/** 하단 고정 sticky 요약 바 */
+function StickyBottomSummary({ summary, production }) {
   const tomorrowCount = production?.tomorrowDeliveryCount || 0
   const totalProductionNeeded = (production?.items || []).reduce((sum, i) => sum + (i.totalQty || 0), 0)
 
   const stats = [
-    { label: '오늘 매출', value: `${(summary.revenue || 0).toLocaleString()}원`, icon: BarChart3, color: 'text-slate-700' },
+    { label: '매출', value: `${(summary.revenue || 0).toLocaleString()}`, icon: BarChart3, color: 'text-slate-700' },
     { label: '발송', value: `${summary.shippedCount}/${summary.totalCount}`, icon: Truck, color: 'text-emerald-600' },
     { label: '착유', value: `${summary.milking}L`, icon: Milk, color: 'text-amber-600' },
     { label: 'D2O', value: `${summary.d2oAlloc}L`, icon: Droplets, color: 'text-blue-600' },
@@ -724,8 +780,8 @@ function SummarySection({ summary, production }) {
   ]
 
   return (
-    <div className="space-y-2">
-      {/* 내일 배송 예정 요약 */}
+    <>
+      {/* 내일 배송 예정 */}
       {tomorrowCount > 0 && (
         <div className="bg-amber-50 rounded-xl p-3 border border-amber-200">
           <div className="flex items-center gap-2">
@@ -736,19 +792,22 @@ function SummarySection({ summary, production }) {
           </div>
         </div>
       )}
-      {/* 기존 요약 */}
-      <div className="bg-white rounded-xl p-3 shadow-sm border border-slate-100">
-        <div className="grid grid-cols-5 gap-1">
-          {stats.map(({ label, value, icon: Icon, color }) => (
-            <div key={label} className="text-center">
-              <Icon className={cn('w-4 h-4 mx-auto mb-0.5', color)} />
-              <p className={cn('text-xs font-bold', color)}>{value}</p>
-              <p className="text-[10px] text-slate-400">{label}</p>
-            </div>
-          ))}
+
+      {/* 고정 하단 요약 바 */}
+      <div className="fixed bottom-0 left-0 right-0 z-20 bg-white/95 backdrop-blur-sm border-t border-slate-200 px-3 py-2.5 safe-area-bottom">
+        <div className="max-w-3xl mx-auto">
+          <div className="grid grid-cols-5 gap-1">
+            {stats.map(({ label, value, icon: Icon, color }) => (
+              <div key={label} className="text-center">
+                <Icon className={cn('w-3.5 h-3.5 mx-auto mb-0.5', color)} />
+                <p className={cn('text-xs font-bold leading-tight', color)}>{value}</p>
+                <p className="text-[9px] text-slate-400">{label}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }
 
@@ -767,7 +826,7 @@ function LegendDot({ color, label }) {
 /** 로딩 스켈레톤 */
 function LoadingSkeleton() {
   return (
-    <div className="max-w-3xl mx-auto space-y-4 pb-4 animate-pulse">
+    <div className="max-w-3xl mx-auto space-y-3 pb-4 px-3 animate-pulse">
       <div className="h-8 bg-slate-200 rounded w-3/4" />
       <div className="h-16 bg-slate-200 rounded-xl" />
       <div className="h-24 bg-slate-200 rounded-xl" />

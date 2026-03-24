@@ -2,6 +2,7 @@
  * @fileoverview B2B 거래처 관리
  * 거래처 목록 + 거래처별 제품·수량 주문 설정
  * 밀크카페, 와인코리아 등 각 거래처의 정기 주문을 관리
+ * 모바일: 세로 스택 카드 + 세로 폼
  */
 import { useState, useEffect, useCallback } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
@@ -140,42 +141,42 @@ export default function B2BPartners() {
   }
 
   return (
-    <div className="flex gap-6 h-[calc(100vh-7rem)]">
-      {/* 좌측: 거래처 목록 */}
+    <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 h-auto lg:h-[calc(100vh-7rem)] px-3 sm:px-0">
+      {/* 좌측: 거래처 목록 — 모바일에서 세로 스택 */}
       <div className={cn('flex flex-col', selected ? 'hidden lg:flex lg:w-[40%]' : 'w-full')}>
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex justify-between items-center mb-3 sm:mb-4">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-              <Building2 className="w-6 h-6 text-indigo-500" />
+            <h1 className="text-lg sm:text-2xl font-bold text-slate-900 flex items-center gap-2">
+              <Building2 className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-500" />
               B2B 거래처
             </h1>
-            <p className="text-sm text-slate-500 mt-0.5">거래처별 제품 주문 관리</p>
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">거래처별 제품 주문 관리</p>
           </div>
-          <Button size="sm" onClick={() => setShowAddPartner(true)}>
+          <Button size="sm" className="h-10 touch-feedback" onClick={() => setShowAddPartner(true)}>
             <Plus className="w-4 h-4 mr-1" />
-            거래처 추가
+            추가
           </Button>
         </div>
 
-        <div className="flex-1 overflow-y-auto space-y-2">
+        <div className="flex-1 overflow-y-auto space-y-2 scroll-momentum">
           {partners.map((p) => (
             <div key={p.id} onClick={() => loadDetail(p)}
-              className={cn('p-4 rounded-xl border cursor-pointer transition-all',
+              className={cn('p-3 sm:p-4 rounded-xl border cursor-pointer transition-all touch-feedback',
                 selected?.id === p.id ? 'bg-indigo-50 border-indigo-300' : 'bg-white hover:bg-slate-50 border-slate-100')}>
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                <div className="flex items-center gap-2.5 sm:gap-3">
+                  <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center shrink-0">
                     <Building2 className="w-5 h-5 text-indigo-500" />
                   </div>
-                  <div>
-                    <p className="font-semibold text-sm">{p.name}</p>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-sm truncate">{p.name}</p>
                     <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-0.5">
                       {p.contact_phone && <span>{p.contact_phone}</span>}
                       <span>배송: {DELIVERY_LABEL[p.delivery_day] || p.delivery_day}</span>
                     </div>
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="text-right shrink-0">
                   <p className="text-xs text-slate-500">{p.active_orders || 0}개 제품</p>
                   {parseInt(p.estimated_monthly) > 0 && (
                     <p className="text-[10px] text-indigo-500 font-bold">
@@ -195,75 +196,77 @@ export default function B2BPartners() {
 
       {/* 우측: 거래처 상세 + 주문 관리 */}
       {selected && detail && (
-        <div className="w-full lg:w-[60%] lg:border-l lg:pl-6 overflow-y-auto">
+        <div className="w-full lg:w-[60%] lg:border-l lg:pl-6 overflow-y-auto scroll-momentum">
           {/* 헤더 */}
-          <div className="flex items-start justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-14 h-14 bg-indigo-100 rounded-xl flex items-center justify-center">
-                <Building2 className="w-7 h-7 text-indigo-500" />
+          <div className="flex items-start justify-between mb-4 sm:mb-6">
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-indigo-100 rounded-xl flex items-center justify-center shrink-0">
+                <Building2 className="w-6 h-6 sm:w-7 sm:h-7 text-indigo-500" />
               </div>
-              <div>
-                <h2 className="text-xl font-bold">{detail.name}</h2>
-                <div className="flex items-center gap-3 text-xs text-slate-400 mt-0.5">
+              <div className="min-w-0">
+                <h2 className="text-lg sm:text-xl font-bold truncate">{detail.name}</h2>
+                <div className="flex items-center gap-2 sm:gap-3 text-xs text-slate-400 mt-0.5 flex-wrap">
                   {detail.contact_name && <span>{detail.contact_name}</span>}
                   <span>배송: {DELIVERY_LABEL[detail.delivery_day] || detail.delivery_day}</span>
                   <span>결제: {detail.payment_terms === 'MONTHLY' ? '월정산' : detail.payment_terms}</span>
                 </div>
               </div>
             </div>
+            {/* 모바일: 뒤로가기 버튼 */}
             <button onClick={() => { setSelected(null); setDetail(null) }}
-              className="p-1.5 hover:bg-slate-100 rounded-lg lg:block hidden">
-              <X className="w-5 h-5 text-slate-400" />
+              className="lg:hidden p-2 bg-slate-100 rounded-lg text-sm font-medium text-slate-600 shrink-0 touch-feedback">
+              ← 목록
             </button>
             <button onClick={() => { setSelected(null); setDetail(null) }}
-              className="lg:hidden p-2 bg-slate-100 rounded-lg text-sm font-medium text-slate-600">
-              ← 목록
+              className="p-1.5 hover:bg-slate-100 rounded-lg hidden lg:block">
+              <X className="w-5 h-5 text-slate-400" />
             </button>
           </div>
 
-          {/* 연락처 */}
-          <div className="grid grid-cols-2 gap-3 mb-6">
+          {/* 연락처 — 모바일 세로 스택 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 mb-4 sm:mb-6">
             {detail.contact_phone && (
-              <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-lg text-sm">
-                <Phone className="w-4 h-4 text-slate-400" />
-                {detail.contact_phone}
-              </div>
+              <a href={`tel:${detail.contact_phone}`}
+                className="flex items-center gap-2 p-3 bg-slate-50 rounded-lg text-sm touch-feedback">
+                <Phone className="w-4 h-4 text-slate-400 shrink-0" />
+                <span className="truncate">{detail.contact_phone}</span>
+              </a>
             )}
             {detail.address && (
-              <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-lg text-sm col-span-2">
-                <MapPin className="w-4 h-4 text-slate-400" />
-                {detail.address}
+              <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-lg text-sm sm:col-span-2">
+                <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
+                <span className="truncate">{detail.address}</span>
               </div>
             )}
           </div>
 
           {/* 정기 주문 */}
-          <Card className="mb-6">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base flex items-center gap-2">
+          <Card className="mb-4 sm:mb-6">
+            <CardHeader className="px-3 sm:px-6">
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle className="text-sm sm:text-base flex items-center gap-2">
                   <Package className="w-4 h-4 text-indigo-500" />
                   제품별 주문
                 </CardTitle>
-                <div className="flex gap-2">
+                <div className="flex gap-1.5 sm:gap-2">
                   {!editingOrders ? (
                     <>
-                      <Button size="sm" variant="outline" onClick={startEditOrders}>
-                        <Edit3 className="w-3 h-3 mr-1" />
+                      <Button size="sm" variant="outline" className="h-10 touch-feedback" onClick={startEditOrders}>
+                        <Edit3 className="w-3.5 h-3.5 mr-1" />
                         수정
                       </Button>
-                      <Button size="sm" onClick={shipNow}>
-                        <Truck className="w-3 h-3 mr-1" />
+                      <Button size="sm" className="h-10 touch-feedback" onClick={shipNow}>
+                        <Truck className="w-3.5 h-3.5 mr-1" />
                         출하
                       </Button>
                     </>
                   ) : (
                     <>
-                      <Button size="sm" onClick={saveOrders}>
-                        <Save className="w-3 h-3 mr-1" />
+                      <Button size="sm" className="h-10 touch-feedback" onClick={saveOrders}>
+                        <Save className="w-3.5 h-3.5 mr-1" />
                         저장
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => setEditingOrders(false)}>
+                      <Button size="sm" variant="outline" className="h-10 touch-feedback" onClick={() => setEditingOrders(false)}>
                         취소
                       </Button>
                     </>
@@ -271,40 +274,77 @@ export default function B2BPartners() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-3 sm:px-6">
               {editingOrders ? (
-                /* 주문 편집 모드 */
-                <div className="space-y-2">
-                  <div className="grid grid-cols-12 gap-2 text-[10px] text-slate-500 font-medium px-1">
+                /* 주문 편집 모드 — 모바일 세로 폼 */
+                <div className="space-y-3">
+                  {/* 데스크톱 헤더 */}
+                  <div className="hidden sm:grid grid-cols-12 gap-2 text-[10px] text-slate-500 font-medium px-1">
                     <div className="col-span-4">제품</div>
                     <div className="col-span-2 text-center">수량</div>
                     <div className="col-span-3 text-center">주기</div>
                     <div className="col-span-3 text-center">단가(원)</div>
                   </div>
                   {orderForm.map((item, idx) => (
-                    <div key={idx} className="grid grid-cols-12 gap-2 items-center p-2 bg-slate-50 rounded-lg">
-                      <div className="col-span-4">
-                        <p className="text-xs font-medium">{item.sku_name}</p>
-                        <p className="text-[9px] text-slate-400">{item.sku_code}</p>
+                    <div key={idx}>
+                      {/* 데스크톱 레이아웃 */}
+                      <div className="hidden sm:grid grid-cols-12 gap-2 items-center p-2 bg-slate-50 rounded-lg">
+                        <div className="col-span-4">
+                          <p className="text-xs font-medium">{item.sku_name}</p>
+                          <p className="text-[9px] text-slate-400">{item.sku_code}</p>
+                        </div>
+                        <div className="col-span-2">
+                          <Input type="number" min={0} className="h-8 text-xs text-center"
+                            value={item.quantity}
+                            onChange={(e) => updateOrderItem(idx, 'quantity', e.target.value)} />
+                        </div>
+                        <div className="col-span-3">
+                          <select className="w-full h-8 text-xs border rounded-md px-2"
+                            value={item.frequency}
+                            onChange={(e) => updateOrderItem(idx, 'frequency', e.target.value)}>
+                            {Object.entries(FREQ_LABEL).map(([k, v]) => (
+                              <option key={k} value={k}>{v}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="col-span-3">
+                          <Input type="number" min={0} className="h-8 text-xs text-center"
+                            value={item.unit_price}
+                            onChange={(e) => updateOrderItem(idx, 'unit_price', e.target.value)} />
+                        </div>
                       </div>
-                      <div className="col-span-2">
-                        <Input type="number" min={0} className="h-8 text-xs text-center"
-                          value={item.quantity}
-                          onChange={(e) => updateOrderItem(idx, 'quantity', e.target.value)} />
-                      </div>
-                      <div className="col-span-3">
-                        <select className="w-full h-8 text-xs border rounded-md px-2"
-                          value={item.frequency}
-                          onChange={(e) => updateOrderItem(idx, 'frequency', e.target.value)}>
-                          {Object.entries(FREQ_LABEL).map(([k, v]) => (
-                            <option key={k} value={k}>{v}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="col-span-3">
-                        <Input type="number" min={0} className="h-8 text-xs text-center"
-                          value={item.unit_price}
-                          onChange={(e) => updateOrderItem(idx, 'unit_price', e.target.value)} />
+                      {/* 모바일 세로 폼 */}
+                      <div className="sm:hidden bg-slate-50 rounded-lg p-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium">{item.sku_name}</p>
+                            <p className="text-[10px] text-slate-400">{item.sku_code}</p>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <div>
+                            <label className="text-[9px] text-slate-400 block mb-0.5">수량</label>
+                            <Input type="number" min={0} className="h-10 text-sm text-center"
+                              value={item.quantity}
+                              onChange={(e) => updateOrderItem(idx, 'quantity', e.target.value)} />
+                          </div>
+                          <div>
+                            <label className="text-[9px] text-slate-400 block mb-0.5">주기</label>
+                            <select className="w-full h-10 text-sm border rounded-md px-2"
+                              value={item.frequency}
+                              onChange={(e) => updateOrderItem(idx, 'frequency', e.target.value)}>
+                              {Object.entries(FREQ_LABEL).map(([k, v]) => (
+                                <option key={k} value={k}>{v}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="text-[9px] text-slate-400 block mb-0.5">단가</label>
+                            <Input type="number" min={0} className="h-10 text-sm text-center"
+                              value={item.unit_price}
+                              onChange={(e) => updateOrderItem(idx, 'unit_price', e.target.value)} />
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -313,22 +353,22 @@ export default function B2BPartners() {
                 /* 주문 표시 모드 */
                 <div className="space-y-2">
                   {(detail.standing_orders || []).filter((o) => o.is_active).map((o) => (
-                    <div key={o.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
-                      <div className="flex items-center gap-3">
-                        <span className="text-xl">
-                          {o.sku_code?.startsWith('A2') ? '🥛' :
-                           o.sku_code?.startsWith('YG') ? '🫙' :
-                           o.sku_code === 'SI-001' ? '🍦' :
-                           o.sku_code === 'KM-100' ? '🧈' : '📦'}
+                    <div key={o.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl touch-feedback">
+                      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                        <span className="text-xl shrink-0">
+                          {o.sku_code?.startsWith('A2') ? '\uD83E\uDD5B' :
+                           o.sku_code?.startsWith('YG') ? '\uD83E\uDED9' :
+                           o.sku_code === 'SI-001' ? '\uD83C\uDF66' :
+                           o.sku_code === 'KM-100' ? '\uD83E\uDDC8' : '\uD83D\uDCE6'}
                         </span>
-                        <div>
-                          <p className="text-sm font-medium">{o.sku_name}</p>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{o.sku_name}</p>
                           <p className="text-[10px] text-slate-400">
                             {FREQ_LABEL[o.frequency]} · {parseInt(o.unit_price).toLocaleString()}원/개
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right shrink-0">
                         <p className="text-lg font-black">{o.quantity}<span className="text-xs text-slate-400 ml-0.5">개</span></p>
                         <p className="text-[10px] text-indigo-500">
                           {(o.quantity * parseInt(o.unit_price)).toLocaleString()}원
@@ -340,7 +380,7 @@ export default function B2BPartners() {
                   {(!detail.standing_orders || detail.standing_orders.filter((o) => o.is_active).length === 0) && (
                     <div className="text-center text-slate-400 py-6">
                       <p className="text-sm">등록된 주문이 없습니다</p>
-                      <Button size="sm" variant="outline" className="mt-2" onClick={startEditOrders}>
+                      <Button size="sm" variant="outline" className="mt-2 h-10 touch-feedback" onClick={startEditOrders}>
                         <Plus className="w-3 h-3 mr-1" />
                         주문 등록
                       </Button>
@@ -354,23 +394,23 @@ export default function B2BPartners() {
           {/* 최근 출하 이력 */}
           {detail.recent_shipments?.length > 0 && (
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
+              <CardHeader className="px-3 sm:px-6">
+                <CardTitle className="text-sm sm:text-base flex items-center gap-2">
                   <Truck className="w-4 h-4 text-slate-500" />
                   최근 출하 이력
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-3 sm:px-6">
                 <div className="space-y-2">
                   {detail.recent_shipments.map((s) => (
-                    <div key={s.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div>
+                    <div key={s.id} className="flex items-center justify-between p-3 border rounded-lg touch-feedback">
+                      <div className="min-w-0">
                         <p className="text-sm font-medium">{s.shipment_date}</p>
-                        <p className="text-[10px] text-slate-400">
+                        <p className="text-[10px] text-slate-400 truncate">
                           {s.items?.map((i) => `${i.sku_code}×${i.quantity}`).join(', ')}
                         </p>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right shrink-0">
                         <span className={cn('text-[9px] px-2 py-0.5 rounded-full font-bold',
                           s.status === 'DELIVERED' ? 'bg-green-100 text-green-700' :
                           s.status === 'SHIPPED' ? 'bg-violet-100 text-violet-700' :
@@ -397,37 +437,39 @@ export default function B2BPartners() {
         </div>
       )}
 
-      {/* 거래처 추가 모달 */}
+      {/* 거래처 추가 모달 — 모바일 바텀시트 */}
       {showAddPartner && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-5">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40">
+          <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl w-full sm:max-w-md mx-0 sm:mx-4 p-5 pb-8 sm:pb-5">
+            <div className="w-10 h-1 bg-slate-300 rounded-full mx-auto mb-4 sm:hidden" />
             <h3 className="text-lg font-bold mb-4">거래처 추가</h3>
             <div className="space-y-3">
               <div>
                 <label className="text-xs font-medium text-slate-600">거래처명 *</label>
-                <Input value={newPartner.name} placeholder="예: 와인코리아"
+                <Input value={newPartner.name} placeholder="예: 와인코리아" className="h-12"
                   onChange={(e) => setNewPartner((p) => ({ ...p, name: e.target.value }))} />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              {/* 모바일: 세로 스택 / 데스크톱: 가로 */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-slate-600">담당자</label>
-                  <Input value={newPartner.contact_name} placeholder="담당자명"
+                  <Input value={newPartner.contact_name} placeholder="담당자명" className="h-12"
                     onChange={(e) => setNewPartner((p) => ({ ...p, contact_name: e.target.value }))} />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-slate-600">전화번호</label>
-                  <Input value={newPartner.contact_phone} placeholder="010-0000-0000"
+                  <Input value={newPartner.contact_phone} placeholder="010-0000-0000" className="h-12" type="tel"
                     onChange={(e) => setNewPartner((p) => ({ ...p, contact_phone: e.target.value }))} />
                 </div>
               </div>
               <div>
                 <label className="text-xs font-medium text-slate-600">주소</label>
-                <Input value={newPartner.address} placeholder="주소"
+                <Input value={newPartner.address} placeholder="주소" className="h-12"
                   onChange={(e) => setNewPartner((p) => ({ ...p, address: e.target.value }))} />
               </div>
               <div>
                 <label className="text-xs font-medium text-slate-600">배송 요일</label>
-                <select className="w-full h-10 px-3 border rounded-md text-sm"
+                <select className="w-full h-12 px-3 border rounded-md text-sm"
                   value={newPartner.delivery_day}
                   onChange={(e) => setNewPartner((p) => ({ ...p, delivery_day: e.target.value }))}>
                   {Object.entries(DELIVERY_LABEL).map(([k, v]) => (
@@ -436,8 +478,8 @@ export default function B2BPartners() {
                 </select>
               </div>
               <div className="flex gap-2 pt-2">
-                <Button onClick={addPartner} className="flex-1">등록</Button>
-                <Button variant="outline" onClick={() => setShowAddPartner(false)}>취소</Button>
+                <Button onClick={addPartner} className="flex-1 h-12 text-sm font-semibold touch-feedback">등록</Button>
+                <Button variant="outline" onClick={() => setShowAddPartner(false)} className="h-12 touch-feedback">취소</Button>
               </div>
             </div>
           </div>

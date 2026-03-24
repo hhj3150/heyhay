@@ -437,7 +437,45 @@ ${JSON.stringify(context.customers, null, 2)}
 6. 납유대금 계산 시 반드시 진흥회 규칙(180L 기준 초과분 감액) 적용
 7. 구독자 관련: 배송 누락 없는지 체크, 수량 검증 포함
 8. 확실하지 않으면 "확인이 필요합니다"라고 솔직히
-9. 주문 복명복창 시 제품명, 수량, 단가, 소계, 합계 모두 명시`
+9. 주문 복명복창 시 제품명, 수량, 단가, 소계, 합계 모두 명시
+
+═══════════════════════════════════════
+  네비게이션 요청 처리
+═══════════════════════════════════════
+
+사용자가 페이지 이동을 요청하면 (키워드: "보여줘", "가줘", "열어줘", "이동", "페이지") 아래 JSON 형식으로 응답하세요:
+{"answer": "주문 관리 페이지로 이동합니다.", "action": {"type": "NAVIGATE", "path": "/market/orders"}}
+
+매핑 테이블:
+- 주문, 주문관리 → /market/orders
+- 구독, 구독관리 → /market/subscriptions
+- 체크리스트, 배송체크 → /market/checklist
+- 고객, 고객관리 → /market/customers
+- 공장, 공장현황 → /factory/dashboard
+- 착유, 착유량, 납유 → /farm/milk
+- 설정, 가격설정, 단가설정 → /settings/prices
+- B2B, 거래처 → /market/b2b
+- 자재, 포장자재 → /factory/packaging
+- 배송, 배송관리 → /market/delivery
+- 홈, 대시보드 → /
+
+주의: 네비게이션과 동시에 데이터 조회가 필요하면 answer에 요약 정보를 포함하고 action도 함께 보내세요.
+네비게이션 요청이 아닌 일반 질문에는 action을 포함하지 마세요.
+
+═══════════════════════════════════════
+  착유량 입력 요청 처리
+═══════════════════════════════════════
+
+사용자가 착유량 입력을 요청하면 (키워드: "착유량 입력", "착유량 기록", "오늘 착유량 X리터") 아래 JSON 형식으로 복명복창 응답하세요:
+{"answer": "착유량 550L를 입력할까요? 확인하시면 바로 기록합니다.", "action": {"type": "MILK_INPUT", "data": {"total_l": 550}}}
+
+숫자 추출: 사용자 메시지에서 리터 수치를 정확히 추출하세요.
+예: "오늘 착유량 550리터 입력해줘" → total_l: 550
+예: "착유 480 기록해" → total_l: 480
+예: "오늘 550리터 짰어, 진흥회 200" → total_l: 550, dairy_assoc_l: 200, d2o_l: 350
+
+진흥회 납유량(dairy_assoc_l)과 D2O 투입량(d2o_l)이 명시되면 data에 포함하세요.
+명시되지 않으면 total_l만 포함하세요 (배분은 사용자가 직접 결정).`
 }
 
 /** POST /ai-chat — AI 대화 + 주문 처리 */
@@ -455,8 +493,8 @@ router.post('/ai-chat', async (req, res, next) => {
     const apiKey = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.Claude_API_Key || process.env.claude_api_key
     if (!apiKey) {
       const context = await gatherContext()
-      const localAnswer = generateLocalAnswer(message, context)
-      return res.json(apiResponse({ answer: localAnswer, source: 'local' }))
+      const localResult = generateLocalAnswer(message, context)
+      return res.json(apiResponse({ answer: localResult.answer, action: localResult.action, source: 'local' }))
     }
 
     const context = await gatherContext()
@@ -486,14 +524,17 @@ router.post('/ai-chat', async (req, res, next) => {
     const data = await response.json()
     let answer = data.content?.[0]?.text || '응답을 생성할 수 없습니다.'
 
-    // JSON 응답 파싱 시도 (주문 데이터 포함 여부)
+    // JSON 응답 파싱 시도 (주문 데이터 / 액션 포함 여부)
     try {
       // JSON 블록이 ```json ... ``` 으로 감싸져 있을 수 있음
-      const jsonMatch = answer.match(/```json\s*([\s\S]*?)```/) || answer.match(/(\{[\s\S]*"order_data"[\s\S]*\})/)
+      const jsonMatch = answer.match(/```json\s*([\s\S]*?)```/)
+        || answer.match(/(\{[\s\S]*"order_data"[\s\S]*\})/)
+        || answer.match(/(\{[\s\S]*"action"[\s\S]*\})/)
       const jsonStr = jsonMatch ? jsonMatch[1] : answer
       const parsed = JSON.parse(jsonStr.trim())
+
+      // 주문 데이터가 포함된 응답
       if (parsed.order_data) {
-        // 퍼지 매칭 후처리: partner_name 정규화
         const normalizedPartner = fuzzyMatchPartner(parsed.order_data.partner_name)
         const normalizedItems = parsed.order_data.items.map((item) => ({
           ...item,
@@ -506,6 +547,15 @@ router.post('/ai-chat', async (req, res, next) => {
             partner_name: normalizedPartner || parsed.order_data.partner_name,
             items: normalizedItems,
           },
+          source: 'claude',
+        }))
+      }
+
+      // 액션이 포함된 응답 (네비게이션, 착유량 입력 등)
+      if (parsed.action) {
+        return res.json(apiResponse({
+          answer: parsed.answer,
+          action: parsed.action,
           source: 'claude',
         }))
       }
@@ -631,8 +681,24 @@ async function executeOrder(orderData) {
   }
 }
 
+// ── 네비게이션 매핑 (로컬 응답용) ──
+const NAV_KEYWORDS = [
+  { keywords: ['주문 관리', '주문관리', '주문 보여', '주문 가'], path: '/market/orders', label: '주문 관리' },
+  { keywords: ['구독 관리', '구독관리', '구독 보여'], path: '/market/subscriptions', label: '구독 관리' },
+  { keywords: ['체크리스트', '배송 체크', '배송체크'], path: '/market/checklist', label: '배송 체크리스트' },
+  { keywords: ['고객 관리', '고객관리', '고객 보여'], path: '/market/customers', label: '고객 관리' },
+  { keywords: ['공장', '공장 보여', '공장현황'], path: '/factory/dashboard', label: '공장 현황' },
+  { keywords: ['착유량 입력', '착유 입력', '납유 입력'], path: '/farm/milk', label: '착유량 입력' },
+  { keywords: ['설정', '가격설정', '단가설정', '설정 열어'], path: '/settings/prices', label: '설정' },
+  { keywords: ['b2b', '거래처'], path: '/market/b2b', label: 'B2B 관리' },
+  { keywords: ['자재', '포장자재'], path: '/factory/packaging', label: '자재 관리' },
+  { keywords: ['배송 관리', '배송관리'], path: '/market/delivery', label: '배송 관리' },
+  { keywords: ['홈', '대시보드'], path: '/', label: '대시보드' },
+]
+
 /**
  * 로컬 응답 (API 키 없을 때)
+ * @returns {{ answer: string, action?: object }} 응답 + 선택적 액션
  */
 function generateLocalAnswer(message, ctx) {
   const q = message.toLowerCase()
@@ -641,40 +707,65 @@ function generateLocalAnswer(message, ctx) {
   const subs = ctx.subscriptions || {}
   const monthly = ctx.monthly_sales || {}
 
+  // 네비게이션 요청 감지 (보여줘, 가줘, 열어줘 등)
+  const navTriggers = ['보여', '가줘', '가자', '열어', '이동']
+  if (navTriggers.some((t) => q.includes(t))) {
+    for (const nav of NAV_KEYWORDS) {
+      if (nav.keywords.some((kw) => q.includes(kw))) {
+        return {
+          answer: `${nav.label} 페이지로 이동합니다.`,
+          action: { type: 'NAVIGATE', path: nav.path },
+        }
+      }
+    }
+  }
+
+  // 착유량 입력 요청 감지
+  const milkInputMatch = q.match(/착유량?\s*(\d+)\s*(리터|l)?.*입력|착유\s*(\d+)\s*(리터|l)?.*기록|(\d+)\s*(리터|l)\s*입력/)
+  if (milkInputMatch) {
+    const totalL = parseInt(milkInputMatch[1] || milkInputMatch[3] || milkInputMatch[5])
+    if (totalL > 0) {
+      return {
+        answer: `착유량 ${totalL}L를 입력할까요? 확인하시면 바로 기록합니다.`,
+        action: { type: 'MILK_INPUT', data: { total_l: totalL } },
+      }
+    }
+  }
+
   if (q.includes('납유') || q.includes('진흥회')) {
     const milking = ctx.milking?.[0]
     if (!milking || !milking.total_l) {
-      return '오늘 착유량이 아직 입력 전입니다. 착유 후 다시 확인해주세요.'
+      return { answer: '오늘 착유량이 아직 입력 전입니다. 착유 후 다시 확인해주세요.' }
     }
-    return `오늘 착유량 ${milking.total_l}L 중 D2O ${milking.d2o_l}L, 진흥회 납유 ${milking.dairy_l}L입니다.`
+    return { answer: `오늘 착유량 ${milking.total_l}L 중 D2O ${milking.d2o_l}L, 진흥회 납유 ${milking.dairy_l}L입니다.` }
   }
   if (q.includes('매출')) {
-    return `이번달 총 매출 ${parseInt(monthly.month_sales || 0).toLocaleString()}원 (${monthly.month_order_count || 0}건). B2B ${parseInt(monthly.b2b_sales || 0).toLocaleString()}원, 온라인 ${parseInt(monthly.online_sales || 0).toLocaleString()}원.`
+    return { answer: `이번달 총 매출 ${parseInt(monthly.month_sales || 0).toLocaleString()}원 (${monthly.month_order_count || 0}건). B2B ${parseInt(monthly.b2b_sales || 0).toLocaleString()}원, 온라인 ${parseInt(monthly.online_sales || 0).toLocaleString()}원.` }
   }
   if (q.includes('생산') || q.includes('공장')) {
-    return `오늘 D2O 공장 생산 계획은 ${prod.daily_to_factory || 0}L입니다.`
+    return { answer: `오늘 D2O 공장 생산 계획은 ${prod.daily_to_factory || 0}L입니다.` }
   }
   if (q.includes('배송') || q.includes('체크')) {
     const total = parseInt(cl.total) || 0
     const shipped = parseInt(cl.shipped) || 0
     const issues = parseInt(cl.issues) || 0
-    return `오늘 배송 ${total}건 중 ${shipped}건 발송 완료.${issues > 0 ? ` 이슈 ${issues}건 확인 필요.` : ''}`
+    return { answer: `오늘 배송 ${total}건 중 ${shipped}건 발송 완료.${issues > 0 ? ` 이슈 ${issues}건 확인 필요.` : ''}` }
   }
   if (q.includes('구독') || q.includes('정기')) {
-    return `활성 구독자 ${subs.active || 0}명, 일시정지 ${subs.paused || 0}명. 월 반복 수익 ${parseInt(subs.mrr || 0).toLocaleString()}원.`
+    return { answer: `활성 구독자 ${subs.active || 0}명, 일시정지 ${subs.paused || 0}명. 월 반복 수익 ${parseInt(subs.mrr || 0).toLocaleString()}원.` }
   }
   if (q.includes('주문')) {
     const orders = ctx.orders || {}
-    return `처리 대기: 접수 ${orders.pending || 0}건, 결제완료 ${orders.paid || 0}건, 처리중 ${orders.processing || 0}건. 오늘 신규 ${orders.today_orders || 0}건.`
+    return { answer: `처리 대기: 접수 ${orders.pending || 0}건, 결제완료 ${orders.paid || 0}건, 처리중 ${orders.processing || 0}건. 오늘 신규 ${orders.today_orders || 0}건.` }
   }
   if (q.includes('착유') || q.includes('우유량')) {
     const milking = ctx.milking?.[0]
     if (!milking || !milking.total_l) {
-      return '오늘 착유량이 아직 입력 전입니다.'
+      return { answer: '오늘 착유량이 아직 입력 전입니다.' }
     }
-    return `오늘 착유량 ${milking.total_l}L (D2O ${milking.d2o_l}L / 진흥회 ${milking.dairy_l}L).`
+    return { answer: `오늘 착유량 ${milking.total_l}L (D2O ${milking.d2o_l}L / 진흥회 ${milking.dairy_l}L).` }
   }
-  return `${prod.daily_milking || '착유 미입력'}L 착유 중, 구독자 ${subs.active || 0}명 활성, 이번달 매출 ${parseInt(monthly.month_sales || 0).toLocaleString()}원.`
+  return { answer: `${prod.daily_milking || '착유 미입력'}L 착유 중, 구독자 ${subs.active || 0}명 활성, 이번달 매출 ${parseInt(monthly.month_sales || 0).toLocaleString()}원.` }
 }
 
 module.exports = router
