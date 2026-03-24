@@ -29,6 +29,20 @@ function getLastNight9pmUtc(todayKst) {
   return d.toISOString()
 }
 
+/** KST 기준 내일 날짜 (YYYY-MM-DD) — 생산은 D+1 배송분 기준 */
+function getKstTomorrow() {
+  const now = new Date()
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000)
+  kst.setDate(kst.getDate() + 1)
+  return kst.toISOString().split('T')[0]
+}
+
+/** 날짜 문자열에서 M/D 형식 추출 */
+function formatShortDate(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00+09:00')
+  return `${d.getMonth() + 1}/${d.getDate()}`
+}
+
 /**
  * 주문 섹션: 신규/대기/발송대기 주문
  * @param {string} todayKst
@@ -92,45 +106,43 @@ async function fetchOrders(todayKst) {
 }
 
 /**
- * 생산 섹션: SKU별 수요 + 원유 소요량 + 부족 자재
+ * 생산 섹션: 내일(D+1) 배송분 기준 SKU별 수요 + 배송지 상세 + 원유 소요량 + 부족 자재
+ * 오늘 생산 → 1일 숙성 → 내일 배송 구조
  * @param {string} todayKst
  * @returns {Promise<Object>}
  */
 async function fetchProduction(todayKst) {
+  const tomorrowKst = getKstTomorrow()
+  const tomorrowDate = new Date(tomorrowKst + 'T00:00:00+09:00')
   const dayMap = { 0: 'SUN', 1: 'MON', 2: 'TUE', 3: 'WED', 4: 'THU', 5: 'FRI', 6: 'SAT' }
-  const todayDate = new Date(todayKst + 'T00:00:00+09:00')
-  const todayDay = dayMap[todayDate.getDay()]
+  const tomorrowDay = dayMap[tomorrowDate.getDay()]
 
-  // 병렬 조회: 구독(오늘 배송분), 미처리 주문, B2B(오늘 배송일), 원유 설정, 착유량, 자재
+  // 병렬 조회: 내일 배송분 구독/주문/B2B + 원유 설정 + 착유량 + 자재 + 생산배치
   const [subsRes, ordersRes, b2bRes, prodSettings, milkRes, materialsRes, prodPlanRes] = await Promise.all([
-    // 오늘 배송 구독 SKU 집계
+    // 내일 배송 구독 — 고객별 상세 포함
     query(`
-      SELECT dc.items
+      SELECT dc.customer_name, dc.shipping_address, dc.items
       FROM delivery_checklist dc
       WHERE dc.delivery_date = $1 AND dc.source_type = 'SUBSCRIPTION'
-    `, [todayKst]).catch(() => ({ rows: [] })),
+    `, [tomorrowKst]).catch(() => ({ rows: [] })),
 
-    // 미처리 주문 SKU 집계
+    // 내일 배송 예정 주문 — 주문별 상세 포함
     query(`
-      SELECT s.code AS sku_code, s.name AS sku_name, SUM(oi.quantity) AS qty
-      FROM order_items oi
-      JOIN orders o ON oi.order_id = o.id
-      JOIN skus s ON oi.sku_id = s.id
-      WHERE o.status IN ('PENDING', 'PAID', 'PROCESSING')
-        AND o.deleted_at IS NULL
-      GROUP BY s.code, s.name
-    `).catch(() => ({ rows: [] })),
+      SELECT dc.customer_name, dc.shipping_address, dc.items, dc.source_id
+      FROM delivery_checklist dc
+      WHERE dc.delivery_date = $1 AND dc.source_type = 'ORDER'
+    `, [tomorrowKst]).catch(() => ({ rows: [] })),
 
-    // B2B 오늘 배송분
+    // B2B 내일 출하 예정 — 거래처별 상세
     query(`
-      SELECT s.code AS sku_code, s.name AS sku_name, SUM(bso.quantity) AS qty
+      SELECT p.name AS partner_name, s.code AS sku_code, s.name AS sku_name,
+             bso.quantity AS qty
       FROM b2b_standing_orders bso
       JOIN b2b_partners p ON bso.partner_id = p.id
       JOIN skus s ON bso.sku_id = s.id
       WHERE bso.is_active = true AND p.is_active = true AND p.deleted_at IS NULL
         AND (p.delivery_day = $1 OR p.delivery_day = 'DAILY')
-      GROUP BY s.code, s.name
-    `, [todayDay]).catch(() => ({ rows: [] })),
+    `, [tomorrowDay]).catch(() => ({ rows: [] })),
 
     loadProductionSettings().catch(() => null),
 
@@ -157,28 +169,81 @@ async function fetchProduction(todayKst) {
     `, [todayKst]).catch(() => ({ rows: [{ cnt: 0 }] })),
   ])
 
-  // 구독 배송 SKU 집계 (delivery_checklist의 items JSON에서 추출)
+  // 구독 배송 — SKU 집계 + 배송지별 상세
   const subSkuMap = {}
+  const subBreakdown = {} // { sku_code: [{customer_name, quantity, address_short}] }
   for (const row of subsRes.rows) {
     const items = typeof row.items === 'string' ? JSON.parse(row.items) : row.items
     if (!Array.isArray(items)) continue
+    const addressShort = shortenAddress(row.shipping_address)
     for (const item of items) {
       const code = item.sku_code
       if (!code) continue
-      subSkuMap[code] = (subSkuMap[code] || 0) + (item.quantity || 0)
+      const qty = item.quantity || 0
+      subSkuMap[code] = (subSkuMap[code] || 0) + qty
+      if (!subBreakdown[code]) {
+        subBreakdown[code] = []
+      }
+      subBreakdown[code] = [
+        ...subBreakdown[code],
+        { customer_name: row.customer_name, quantity: qty, address_short: addressShort },
+      ]
     }
   }
 
-  // 미처리 주문 SKU
+  // 주문 배송 — SKU 집계 + 주문별 상세 (주문번호 조회)
   const orderSkuMap = {}
-  for (const row of ordersRes.rows) {
-    orderSkuMap[row.sku_code] = parseInt(row.qty)
+  const orderBreakdown = {} // { sku_code: [{order_number, recipient, quantity}] }
+  const orderSourceIds = ordersRes.rows
+    .filter((r) => r.source_id)
+    .map((r) => r.source_id)
+
+  // 주문번호 매핑 (source_id → order_number)
+  let orderNumberMap = {}
+  if (orderSourceIds.length > 0) {
+    const orderNumRes = await query(`
+      SELECT id, order_number FROM orders WHERE id = ANY($1)
+    `, [orderSourceIds]).catch(() => ({ rows: [] }))
+    for (const r of orderNumRes.rows) {
+      orderNumberMap = { ...orderNumberMap, [r.id]: r.order_number }
+    }
   }
 
-  // B2B SKU
+  for (const row of ordersRes.rows) {
+    const items = typeof row.items === 'string' ? JSON.parse(row.items) : row.items
+    if (!Array.isArray(items)) continue
+    const orderNumber = orderNumberMap[row.source_id] || ''
+    for (const item of items) {
+      const code = item.sku_code
+      if (!code) continue
+      const qty = item.quantity || 0
+      orderSkuMap[code] = (orderSkuMap[code] || 0) + qty
+      if (!orderBreakdown[code]) {
+        orderBreakdown[code] = []
+      }
+      orderBreakdown[code] = [
+        ...orderBreakdown[code],
+        { order_number: orderNumber, recipient: row.customer_name, quantity: qty },
+      ]
+    }
+  }
+
+  // B2B — SKU 집계 + 거래처별 상세
   const b2bSkuMap = {}
+  const b2bBreakdown = {} // { sku_code: [{partner_name, quantity}] }
+  const skuNameMap = {}
   for (const row of b2bRes.rows) {
-    b2bSkuMap[row.sku_code] = parseInt(row.qty)
+    const code = row.sku_code
+    const qty = parseInt(row.qty)
+    b2bSkuMap[code] = (b2bSkuMap[code] || 0) + qty
+    skuNameMap[code] = row.sku_name
+    if (!b2bBreakdown[code]) {
+      b2bBreakdown[code] = []
+    }
+    b2bBreakdown[code] = [
+      ...b2bBreakdown[code],
+      { partner_name: row.partner_name, quantity: qty },
+    ]
   }
 
   // SKU별 통합 수요
@@ -187,15 +252,6 @@ async function fetchProduction(todayKst) {
     ...Object.keys(orderSkuMap),
     ...Object.keys(b2bSkuMap),
   ])
-
-  // SKU 이름 매핑 (ordersRes, b2bRes에서 추출)
-  const skuNameMap = {}
-  for (const row of ordersRes.rows) {
-    skuNameMap[row.sku_code] = row.sku_name
-  }
-  for (const row of b2bRes.rows) {
-    skuNameMap[row.sku_code] = row.sku_name
-  }
 
   const skuDemand = []
   const skuTotals = {}
@@ -214,6 +270,11 @@ async function fetchProduction(todayKst) {
         subscription: subQty,
         orders: orderQty,
         b2b: b2bQty,
+      },
+      breakdown: {
+        subscription: subBreakdown[code] || [],
+        orders: orderBreakdown[code] || [],
+        b2b: b2bBreakdown[code] || [],
       },
     })
 
@@ -243,13 +304,36 @@ async function fetchProduction(todayKst) {
 
   const productionPlanExists = parseInt(prodPlanRes.rows[0].cnt) > 0
 
+  // 내일 배송 총 건수 (생산 필요 요약용)
+  const tomorrowDeliveryCount = subsRes.rows.length + ordersRes.rows.length + b2bRes.rows.length
+
   return {
+    label: `오늘 생산 → 내일(${formatShortDate(tomorrowKst)}) 배송분`,
+    target_delivery_date: tomorrowKst,
+    tomorrow_delivery_count: tomorrowDeliveryCount,
     sku_demand: skuDemand,
     milk_needed_l: milkNeededL,
     milk_recorded_l: milkRecordedL,
     materials_shortage: materialsShortage,
     production_plan_exists: productionPlanExists,
   }
+}
+
+/**
+ * 주소를 "시/도 시/군/구" 형태로 축약
+ * @param {string|null} address
+ * @returns {string}
+ */
+function shortenAddress(address) {
+  if (!address) return ''
+  const parts = address.trim().split(/\s+/)
+  // 보통 "경기도 안성시 ..." → "경기 안성" 형태
+  if (parts.length >= 2) {
+    const province = parts[0].replace(/특별시|광역시|특별자치시|특별자치도|도$/, '')
+    const city = parts[1].replace(/시$|군$|구$/, '')
+    return `${province} ${city}`
+  }
+  return parts[0] || ''
 }
 
 /**
@@ -301,6 +385,7 @@ async function fetchDeliveries(todayKst) {
   const stats = statsRes.rows[0]
 
   return {
+    label: '오늘 배송 (어제 생산분)',
     subscription: subDeliveries.rows,
     orders: orderDeliveries.rows,
     b2b: b2bDeliveries.rows,

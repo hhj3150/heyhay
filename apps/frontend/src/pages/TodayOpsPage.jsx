@@ -12,8 +12,8 @@ import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import {
   AlertTriangle, Bell, CheckCircle2, Package, Truck, Milk,
-  ChevronRight, Clock, RefreshCw, Boxes, CreditCard,
-  BarChart3, Droplets, Send, CircleAlert, ShoppingCart,
+  ChevronRight, ChevronDown, Clock, RefreshCw, Boxes, CreditCard,
+  BarChart3, Droplets, Send, CircleAlert, ShoppingCart, Calendar,
 } from 'lucide-react'
 
 /* ─────────── 상수 ─────────── */
@@ -54,6 +54,76 @@ function emptyData() {
   }
 }
 
+/**
+ * 백엔드 응답 → 프론트엔드 데이터 변환
+ * 생산: sku_demand → items, 배송: checklist → items
+ */
+function transformOpsData(raw) {
+  const prod = raw.production || {}
+  const del = raw.deliveries || {}
+
+  // 생산 데이터 변환
+  const prodItems = (prod.sku_demand || []).map((d) => ({
+    sku: d.sku_name || d.sku_code,
+    skuCode: d.sku_code,
+    totalQty: d.needed,
+    subscription: d.reason_breakdown?.subscription || 0,
+    order: d.reason_breakdown?.orders || 0,
+    b2b: d.reason_breakdown?.b2b || 0,
+    milkNeeded: 0,
+    breakdown: d.breakdown || null,
+  }))
+
+  // 배송 데이터 변환 — 구독/주문/B2B 체크리스트를 단일 리스트로 병합
+  const mapChecklist = (rows, orderType) =>
+    (rows || []).map((r) => {
+      const items = typeof r.items === 'string' ? JSON.parse(r.items) : r.items
+      return {
+        orderId: r.id,
+        orderType,
+        customerName: r.customer_name,
+        products: Array.isArray(items)
+          ? items.map((i) => `${i.sku_code}×${i.quantity}`).join(', ')
+          : '',
+        itemDetails: Array.isArray(items) ? items : [],
+        address: r.shipping_address || '',
+        status: r.is_shipped ? 'shipped' : r.is_packed ? 'packed' : 'pending',
+        trackingNumber: r.tracking_number || '',
+        packagingNote: r.ice_pack_count > 1 ? `아이스팩 ${r.ice_pack_count}개` : '',
+        hasIssue: r.has_issue,
+        issueNote: r.issue_note,
+      }
+    })
+
+  const deliveryItems = [
+    ...mapChecklist(del.subscription, 'subscription'),
+    ...mapChecklist(del.orders, 'order'),
+    ...mapChecklist(del.b2b, 'b2b'),
+  ]
+
+  const stats = del.checklist_stats || { total: 0, packed: 0, shipped: 0, issues: 0 }
+
+  return {
+    ...raw,
+    production: {
+      items: prodItems,
+      label: prod.label || '생산 계획',
+      tomorrowDeliveryCount: prod.tomorrow_delivery_count || 0,
+      totalMilkNeeded: prod.milk_needed_l || 0,
+      totalMilking: raw.milking?.today_total || 0,
+      d2oAlloc: raw.milking?.d2o || 0,
+      dairyAssocAlloc: raw.milking?.dairy_assoc || 0,
+    },
+    deliveries: {
+      total: stats.total,
+      shipped: stats.shipped,
+      pending: stats.total - stats.shipped,
+      items: deliveryItems,
+      label: del.label || '배송 실행',
+    },
+  }
+}
+
 /* ─────────── 메인 페이지 ─────────── */
 export default function TodayOpsPage() {
   const [data, setData] = useState(emptyData)
@@ -66,7 +136,7 @@ export default function TodayOpsPage() {
     try {
       const res = await apiGet('/dashboard/today-ops')
       if (res.success && res.data) {
-        setData(res.data)
+        setData(transformOpsData(res.data))
       }
     } catch (error) {
       toast.error('운영 데이터를 불러오지 못했습니다')
@@ -161,7 +231,7 @@ export default function TodayOpsPage() {
       />
 
       {/* 5. 하단 요약 */}
-      <SummarySection summary={summary} />
+      <SummarySection summary={summary} production={production} />
     </div>
   )
 }
@@ -296,67 +366,93 @@ function UrgentSection({ urgentActions, alerts, milkEntered, navigate }) {
   )
 }
 
-/** 생산 계획 테이블 + 원유 배분 바 */
+/** 생산 계획 테이블 + 드릴다운 accordion + 원유 배분 바 */
 function ProductionSection({ production }) {
-  const { items, totalMilkNeeded, totalMilking, d2oAlloc, dairyAssocAlloc } = production
+  const { items, totalMilkNeeded, totalMilking, d2oAlloc, dairyAssocAlloc, label } = production
   const milkUsagePercent = totalMilking > 0 ? Math.round((d2oAlloc / totalMilking) * 100) : 0
+  const [expandedSku, setExpandedSku] = useState(null)
+
+  const toggleSku = (sku) => {
+    setExpandedSku((prev) => (prev === sku ? null : sku))
+  }
 
   return (
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
-          <Droplets className="w-4 h-4 text-blue-500" />
-          생산 계획
+          <Package className="w-4 h-4 text-blue-500" />
+          {label || '생산 계획'}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {/* 제품별 테이블 */}
+        {/* SKU별 생산 수요 + 드릴다운 */}
         {items.length > 0 ? (
           <div className="space-y-2">
             {items.map((item) => {
-              const maxQty = Math.max(item.subscription || 0, item.order || 0, item.b2b || 0, 1)
+              const isExpanded = expandedSku === item.sku
               return (
-                <div key={item.sku} className="bg-slate-50 rounded-lg p-3">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-sm font-medium text-slate-800">{item.sku}</span>
-                    <span className="text-xs text-slate-500">{item.totalQty}개 · {item.milkNeeded}L</span>
-                  </div>
-                  {/* 수량 내역 가로 막대 */}
-                  <div className="flex gap-1 h-2.5 rounded-full overflow-hidden bg-slate-200">
-                    {item.subscription > 0 && (
-                      <div
-                        className="bg-purple-500 rounded-full"
-                        style={{ flex: item.subscription }}
-                        title={`구독 ${item.subscription}`}
-                      />
-                    )}
-                    {item.order > 0 && (
-                      <div
-                        className="bg-emerald-500 rounded-full"
-                        style={{ flex: item.order }}
-                        title={`주문 ${item.order}`}
-                      />
-                    )}
-                    {item.b2b > 0 && (
-                      <div
-                        className="bg-blue-500 rounded-full"
-                        style={{ flex: item.b2b }}
-                        title={`B2B ${item.b2b}`}
-                      />
-                    )}
-                  </div>
-                  {/* 범례 */}
-                  <div className="flex gap-3 mt-1.5">
-                    {item.subscription > 0 && (
-                      <LegendDot color="bg-purple-500" label={`구독 ${item.subscription}`} />
-                    )}
-                    {item.order > 0 && (
-                      <LegendDot color="bg-emerald-500" label={`주문 ${item.order}`} />
-                    )}
-                    {item.b2b > 0 && (
-                      <LegendDot color="bg-blue-500" label={`B2B ${item.b2b}`} />
-                    )}
-                  </div>
+                <div key={item.sku} className="bg-slate-50 rounded-lg overflow-hidden">
+                  {/* 클릭 가능한 헤더 */}
+                  <button
+                    onClick={() => toggleSku(item.sku)}
+                    className="w-full text-left p-3 active:bg-slate-100 transition-colors"
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-1.5">
+                        {isExpanded
+                          ? <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          : <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
+                        <span className="text-sm font-medium text-slate-800">{item.sku}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-slate-700">{item.totalQty}개</span>
+                        {item.milkNeeded > 0 && (
+                          <span className="text-xs text-slate-500">{item.milkNeeded}L</span>
+                        )}
+                      </div>
+                    </div>
+                    {/* 수량 내역 가로 막대 */}
+                    <div className="flex gap-1 h-2.5 rounded-full overflow-hidden bg-slate-200">
+                      {item.subscription > 0 && (
+                        <div
+                          className="bg-purple-500 rounded-full"
+                          style={{ flex: item.subscription }}
+                          title={`구독 ${item.subscription}`}
+                        />
+                      )}
+                      {item.order > 0 && (
+                        <div
+                          className="bg-emerald-500 rounded-full"
+                          style={{ flex: item.order }}
+                          title={`주문 ${item.order}`}
+                        />
+                      )}
+                      {item.b2b > 0 && (
+                        <div
+                          className="bg-blue-500 rounded-full"
+                          style={{ flex: item.b2b }}
+                          title={`B2B ${item.b2b}`}
+                        />
+                      )}
+                    </div>
+                    {/* 범례 — 요약 수량 포함 */}
+                    <div className="flex gap-3 mt-1.5">
+                      {item.subscription > 0 && (
+                        <LegendDot color="bg-purple-500" label={`구독 ${item.subscription}`} />
+                      )}
+                      {item.order > 0 && (
+                        <LegendDot color="bg-emerald-500" label={`주문 ${item.order}`} />
+                      )}
+                      {item.b2b > 0 && (
+                        <LegendDot color="bg-blue-500" label={`B2B ${item.b2b}`} />
+                      )}
+                    </div>
+                  </button>
+
+                  {/* 드릴다운 상세 */}
+                  {isExpanded && item.breakdown && (
+                    <BreakdownDetail breakdown={item.breakdown} />
+                  )}
                 </div>
               )
             })}
@@ -393,9 +489,67 @@ function ProductionSection({ production }) {
   )
 }
 
+/** SKU 드릴다운 — 구독/주문/B2B 배송지별 상세 */
+function BreakdownDetail({ breakdown }) {
+  const { subscription, orders, b2b } = breakdown
+  const hasAny = subscription.length > 0 || orders.length > 0 || b2b.length > 0
+
+  if (!hasAny) return null
+
+  return (
+    <div className="px-3 pb-3 space-y-2 border-t border-slate-200 pt-2">
+      {/* 구독 */}
+      {subscription.length > 0 && (
+        <div>
+          <p className="text-[10px] font-semibold text-purple-600 mb-1">구독</p>
+          <div className="space-y-0.5">
+            {subscription.map((s, i) => (
+              <p key={`sub-${i}`} className="text-xs text-slate-600 pl-2">
+                {s.customer_name} {s.quantity}개
+                {s.address_short && (
+                  <span className="text-slate-400 ml-1">({s.address_short})</span>
+                )}
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
+      {/* 주문 */}
+      {orders.length > 0 && (
+        <div>
+          <p className="text-[10px] font-semibold text-emerald-600 mb-1">주문</p>
+          <div className="space-y-0.5">
+            {orders.map((o, i) => (
+              <p key={`ord-${i}`} className="text-xs text-slate-600 pl-2">
+                {o.order_number && (
+                  <span className="text-slate-400 mr-1">{o.order_number}</span>
+                )}
+                {o.recipient} {o.quantity}개
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
+      {/* B2B */}
+      {b2b.length > 0 && (
+        <div>
+          <p className="text-[10px] font-semibold text-blue-600 mb-1">B2B</p>
+          <div className="space-y-0.5">
+            {b2b.map((b, i) => (
+              <p key={`b2b-${i}`} className="text-xs text-slate-600 pl-2">
+                {b.partner_name} {b.quantity}개
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 /** 배송 실행 체크리스트 */
 function DeliverySection({ deliveries, processingIds, onPack, onShip }) {
-  const { total, shipped, pending, items } = deliveries
+  const { total, shipped, pending, items, label } = deliveries
 
   return (
     <Card>
@@ -403,7 +557,7 @@ function DeliverySection({ deliveries, processingIds, onPack, onShip }) {
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
             <Truck className="w-4 h-4 text-emerald-500" />
-            배송 실행
+            {label || '배송 실행'}
           </CardTitle>
           <div className="flex gap-2 text-xs">
             <span className="text-slate-500">전체 {total}건</span>
@@ -451,9 +605,11 @@ function DeliverySection({ deliveries, processingIds, onPack, onShip }) {
                       {typeStyle.label}
                     </span>
                   </div>
-                  {/* 상품 목록 */}
+                  {/* 상품 목록 — 제품 상세 표시 */}
                   <p className="text-xs text-slate-500 mt-1 truncate">
-                    {item.products}
+                    {item.itemDetails
+                      ? item.itemDetails.map((d) => `${d.sku_code}×${d.quantity}`).join(', ')
+                      : item.products}
                   </p>
                   {/* 주소 */}
                   <p className="text-xs text-slate-400 mt-0.5 truncate">
@@ -525,7 +681,10 @@ function DeliverySection({ deliveries, processingIds, onPack, onShip }) {
 }
 
 /** 하단 요약 스트립 */
-function SummarySection({ summary }) {
+function SummarySection({ summary, production }) {
+  const tomorrowCount = production?.tomorrowDeliveryCount || 0
+  const totalProductionNeeded = (production?.items || []).reduce((sum, i) => sum + (i.totalQty || 0), 0)
+
   const stats = [
     { label: '오늘 매출', value: `${(summary.revenue || 0).toLocaleString()}원`, icon: BarChart3, color: 'text-slate-700' },
     { label: '발송', value: `${summary.shippedCount}/${summary.totalCount}`, icon: Truck, color: 'text-emerald-600' },
@@ -535,15 +694,29 @@ function SummarySection({ summary }) {
   ]
 
   return (
-    <div className="bg-white rounded-xl p-3 shadow-sm border border-slate-100">
-      <div className="grid grid-cols-5 gap-1">
-        {stats.map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="text-center">
-            <Icon className={cn('w-4 h-4 mx-auto mb-0.5', color)} />
-            <p className={cn('text-xs font-bold', color)}>{value}</p>
-            <p className="text-[10px] text-slate-400">{label}</p>
+    <div className="space-y-2">
+      {/* 내일 배송 예정 요약 */}
+      {tomorrowCount > 0 && (
+        <div className="bg-amber-50 rounded-xl p-3 border border-amber-200">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-amber-600 shrink-0" />
+            <p className="text-xs font-semibold text-amber-800">
+              내일 배송 예정 {tomorrowCount}건 → 오늘 {totalProductionNeeded}개 제품 생산 필요
+            </p>
           </div>
-        ))}
+        </div>
+      )}
+      {/* 기존 요약 */}
+      <div className="bg-white rounded-xl p-3 shadow-sm border border-slate-100">
+        <div className="grid grid-cols-5 gap-1">
+          {stats.map(({ label, value, icon: Icon, color }) => (
+            <div key={label} className="text-center">
+              <Icon className={cn('w-4 h-4 mx-auto mb-0.5', color)} />
+              <p className={cn('text-xs font-bold', color)}>{value}</p>
+              <p className="text-[10px] text-slate-400">{label}</p>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )
