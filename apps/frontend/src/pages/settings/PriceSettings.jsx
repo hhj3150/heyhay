@@ -1,6 +1,6 @@
 /**
  * @fileoverview 제품 단가 관리 페이지
- * 행=SKU(6종), 열=채널(소비자/구독/B2B/카페) 테이블
+ * 행=SKU(6종), 열=채널(소비자/구독/B2B) 테이블
  * 각 셀 클릭 → 인라인 편집 → 저장
  * 변경 이력 보기 토글
  */
@@ -12,16 +12,15 @@ import { apiGet, apiPut } from '@/lib/api'
 import { DollarSign, Save, X, History, ChevronDown, ChevronUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-/** 채널 표시 라벨 */
+/** 채널 표시 라벨 — 밀크카페는 B2B 거래처로만 관리 */
 const CHANNEL_LABELS = {
   RETAIL: '소비자',
   SUBSCRIPTION: '구독',
   B2B: 'B2B',
-  CAFE: '카페',
 }
 
 /** 채널 순서 */
-const CHANNELS = ['RETAIL', 'SUBSCRIPTION', 'B2B', 'CAFE']
+const CHANNELS = ['RETAIL', 'SUBSCRIPTION', 'B2B']
 
 /**
  * 가격 데이터를 SKU별 → 채널별 맵으로 변환

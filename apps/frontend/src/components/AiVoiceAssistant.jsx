@@ -282,6 +282,13 @@ export default function AiVoiceAssistant() {
   const hasSpeech = !!SpeechRecognition
   const hasTTS = 'speechSynthesis' in window
 
+  // 외부 이벤트로 AI 비서 열기 (모바일 하단 탭 등)
+  useEffect(() => {
+    const handleOpenEvent = () => setIsOpen(true)
+    window.addEventListener('open-ai-assistant', handleOpenEvent)
+    return () => window.removeEventListener('open-ai-assistant', handleOpenEvent)
+  }, [])
+
   // 자동 스크롤
   useEffect(() => {
     if (messagesEndRef.current) {

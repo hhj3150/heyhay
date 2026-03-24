@@ -246,7 +246,14 @@ export default function FactoryDashboard() {
               </div>
             </>
           ) : (
-            <p className="text-center text-slate-400 py-8">재고 데이터 없음</p>
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Package className="w-10 h-10 text-slate-300 mb-3" />
+              <p className="text-sm text-slate-500 mb-1">생산 기록이 없습니다.</p>
+              <p className="text-xs text-slate-400 mb-4">생산 등록을 시작하세요.</p>
+              <Button variant="factory" onClick={() => setShowBatch(true)}>
+                <Plus className="w-4 h-4" /> 생산 등록
+              </Button>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -273,7 +280,14 @@ export default function FactoryDashboard() {
               ))}
             </div>
           ) : (
-            <p className="text-center text-slate-400 py-8">생산 기록 없음</p>
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Package className="w-10 h-10 text-slate-300 mb-3" />
+              <p className="text-sm text-slate-500 mb-1">생산 기록이 없습니다.</p>
+              <p className="text-xs text-slate-400 mb-4">생산 등록을 시작하세요.</p>
+              <Button variant="factory" onClick={() => setShowBatch(true)}>
+                <Plus className="w-4 h-4" /> 생산 등록
+              </Button>
+            </div>
           )}
         </CardContent>
       </Card>

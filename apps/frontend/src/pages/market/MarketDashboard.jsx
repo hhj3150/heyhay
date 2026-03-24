@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { apiGet, apiPost } from '@/lib/api'
 import { ShoppingCart, Users, CreditCard, TrendingUp, Plus, X, Package } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { formatDate } from '@/lib/date'
 
 const ORDER_STATUS = {
   PENDING: { label: '대기', color: 'bg-slate-100 text-slate-700' },
@@ -142,7 +143,7 @@ export default function MarketDashboard() {
                       {parseInt(s.price_per_cycle).toLocaleString()}원/회
                     </span>
                     <span className="text-[10px] text-slate-400">
-                      다음결제 {s.next_payment_at}
+                      다음결제 {formatDate(s.next_payment_at)}
                     </span>
                   </div>
                 ))}

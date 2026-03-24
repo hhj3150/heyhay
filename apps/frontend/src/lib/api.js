@@ -132,7 +132,7 @@ export const apiPut = (endpoint, body) =>
 export const apiDelete = (endpoint) =>
   api(endpoint, { method: 'DELETE' })
 
-export { setTokens, clearTokens, getAccessToken }
+export { setTokens, clearTokens, getAccessToken, refreshAccessToken }
 
 /** 비활성 30분 시 자동 로그아웃 */
 let inactivityTimer = null

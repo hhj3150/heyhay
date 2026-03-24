@@ -268,20 +268,38 @@ export default function OrderBoard() {
 
       {/* 상단 요약 */}
       {stats && (
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-3">
-          {COLUMNS.map((col) => {
-            const count = orders[col.status]?.length || 0
-            return (
-              <div key={col.status} className={cn('text-center p-2 rounded-lg border-t-4', col.color, col.bg)}>
-                <col.icon className="w-4 h-4 mx-auto mb-1 text-slate-500" />
-                <p className="text-[10px] text-slate-500 font-medium">{col.label}</p>
-                <p className={cn('text-xl font-bold', count > 0 && col.status !== 'DELIVERED' ? 'text-slate-900' : 'text-slate-300')}>
-                  {count}
-                </p>
-              </div>
-            )
-          })}
-        </div>
+        <>
+          {/* 모바일: grid 레이아웃 */}
+          <div className="grid grid-cols-3 gap-2 md:hidden">
+            {COLUMNS.map((col) => {
+              const count = orders[col.status]?.length || 0
+              return (
+                <div key={col.status} className={cn('text-center p-2 rounded-lg border-t-4', col.color, col.bg)}>
+                  <col.icon className="w-4 h-4 mx-auto mb-1 text-slate-500" />
+                  <p className="text-[10px] text-slate-500 font-medium">{col.label}</p>
+                  <p className={cn('text-xl font-bold', count > 0 && col.status !== 'DELIVERED' ? 'text-slate-900' : 'text-slate-300')}>
+                    {count}
+                  </p>
+                </div>
+              )
+            })}
+          </div>
+          {/* 데스크톱: 칸반 열과 동일 너비로 정렬 */}
+          <div className="hidden md:flex gap-3 overflow-x-auto pb-2">
+            {COLUMNS.map((col) => {
+              const count = orders[col.status]?.length || 0
+              return (
+                <div key={col.status} className={cn('flex-shrink-0 text-center p-2 rounded-lg border-t-4', col.color, col.bg)} style={{ minWidth: '250px', width: '250px' }}>
+                  <col.icon className="w-4 h-4 mx-auto mb-1 text-slate-500" />
+                  <p className="text-[10px] text-slate-500 font-medium">{col.label}</p>
+                  <p className={cn('text-xl font-bold', count > 0 && col.status !== 'DELIVERED' ? 'text-slate-900' : 'text-slate-300')}>
+                    {count}
+                  </p>
+                </div>
+              )
+            })}
+          </div>
+        </>
       )}
 
       {/* 모바일: 탭 방식 (md 미만) */}
@@ -409,7 +427,7 @@ export default function OrderBoard() {
         {COLUMNS.map((col) => {
           const colOrders = filterOrders(orders[col.status] || [])
           return (
-            <div key={col.status} className="flex-shrink-0 snap-start" style={{ minWidth: '280px', width: '280px' }}>
+            <div key={col.status} className="flex-shrink-0 snap-start" style={{ minWidth: '250px', width: '250px' }}>
               <div className={cn('rounded-t-lg border-t-4 p-3 mb-2', col.color, col.bg)}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">

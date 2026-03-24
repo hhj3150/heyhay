@@ -2,17 +2,19 @@
  * @fileoverview 모바일 하단 네비게이션 바
  * 768px 이하에서만 표시, 엄지 접근성 최적화
  * safe-area-inset-bottom 적용 (아이폰 노치 대응)
+ *
+ * AI 비서 탭은 라우트 이동이 아닌 커스텀 이벤트로 FloatingButton 열기
  */
 import { NavLink, useLocation } from 'react-router-dom'
 import { Home, Package, Truck, Milk, Bot } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-const TABS = [
+/** 라우트 이동하는 일반 탭 */
+const NAV_TABS = [
   { path: '/', label: '홈', icon: Home, exact: true },
   { path: '/market/orders', label: '주문', icon: Package },
   { path: '/market/checklist', label: '배송', icon: Truck },
   { path: '/farm/milk', label: '착유', icon: Milk },
-  { path: '/ai-assistant', label: 'AI비서', icon: Bot },
 ]
 
 export default function MobileBottomNav() {
@@ -26,6 +28,11 @@ export default function MobileBottomNav() {
     return location.pathname.startsWith(tab.path)
   }
 
+  /** AI 비서 열기 — 라우트 이동 대신 커스텀 이벤트 발행 */
+  const handleOpenAi = () => {
+    window.dispatchEvent(new CustomEvent('open-ai-assistant'))
+  }
+
   return (
     <nav
       className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 shadow-[0_-2px_10px_rgba(0,0,0,0.06)]"
@@ -33,7 +40,7 @@ export default function MobileBottomNav() {
       aria-label="모바일 하단 네비게이션"
     >
       <div className="flex items-center justify-around h-[60px]">
-        {TABS.map((tab) => {
+        {NAV_TABS.map((tab) => {
           const active = isActive(tab)
           return (
             <NavLink
@@ -60,6 +67,21 @@ export default function MobileBottomNav() {
             </NavLink>
           )
         })}
+
+        {/* AI 비서 — 컴포넌트 상태 변경 (라우트 이동 아님) */}
+        <button
+          onClick={handleOpenAi}
+          className={cn(
+            'flex flex-col items-center justify-center gap-0.5',
+            'min-w-[44px] min-h-[44px] px-2 py-1',
+            'rounded-lg transition-colors active:scale-95',
+            'text-slate-400 hover:text-slate-600',
+          )}
+          aria-label="AI비서"
+        >
+          <Bot className="w-5 h-5" />
+          <span className="text-[10px] leading-tight font-medium">AI비서</span>
+        </button>
       </div>
     </nav>
   )

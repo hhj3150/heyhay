@@ -1,6 +1,7 @@
 /**
  * @fileoverview 메인 레이아웃 (사이드바 + 콘텐츠 + 뒤로가기 + AI 비서)
  */
+import { useEffect } from 'react'
 import { Outlet, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import MobileBottomNav from './MobileBottomNav'
@@ -11,7 +12,12 @@ import { Toaster } from 'sonner'
 import OfflineIndicator from '@/components/OfflineIndicator'
 
 export default function AppLayout() {
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, initAuth } = useAuthStore()
+
+  // 앱 시작(하드 리프레시 포함) 시 토큰 유효성 검증 및 자동 갱신
+  useEffect(() => {
+    initAuth()
+  }, [initAuth])
   const navigate = useNavigate()
   const location = useLocation()
 
