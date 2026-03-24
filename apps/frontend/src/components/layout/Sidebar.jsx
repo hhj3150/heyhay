@@ -5,10 +5,10 @@
  */
 import { NavLink, useLocation } from 'react-router-dom'
 import {
-  LayoutDashboard, Milk, Factory, ShoppingCart, Coffee,
-  LogOut, ChevronLeft, ChevronRight, Baby, Heart, Wheat,
-  Package, CreditCard, BarChart3, Users, Calendar, Menu, X,
-  Monitor, DollarSign, ClipboardList, Gauge, Building2, ClipboardCheck,
+  LayoutDashboard, Milk, Factory, ShoppingCart,
+  LogOut, ChevronLeft, ChevronRight, Menu, X,
+  Package, CreditCard, BarChart3, Users, Calendar,
+  DollarSign, ClipboardList, Gauge, Building2, ClipboardCheck,
   Settings, Cog, Boxes,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
@@ -16,9 +16,8 @@ import useAuthStore from '@/stores/authStore'
 import { cn } from '@/lib/utils'
 
 const ROLE_PERMISSIONS = {
-  ADMIN: ['dashboard', 'farm', 'factory', 'market', 'cafe', 'settings'],
+  ADMIN: ['dashboard', 'farm', 'factory', 'market', 'settings'],
   FACTORY: ['dashboard', 'factory'],
-  CAFE: ['dashboard', 'cafe'],
   FARM: ['dashboard', 'farm'],
 }
 
@@ -42,10 +41,6 @@ const NAV_ITEMS = [
     { label: '고객 관리', icon: Users, path: '/market/customers' },
     { label: '배송 스케줄', icon: Calendar, path: '/market/delivery' },
     { label: '현황 요약', icon: BarChart3, path: '/market/overview' },
-  ]},
-  { id: 'cafe', label: '밀크카페', icon: Coffee, path: '/cafe', color: 'text-violet-500', children: [
-    { label: 'POS 판매', icon: Monitor, path: '/cafe/pos' },
-    { label: '매출·정산', icon: DollarSign, path: '/cafe/dashboard' },
   ]},
   { id: 'settings', label: '설정', icon: Settings, path: '/settings', color: 'text-slate-500', children: [
     { label: '제품 단가', icon: DollarSign, path: '/settings/prices' },

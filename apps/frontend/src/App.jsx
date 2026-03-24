@@ -13,7 +13,7 @@ const DashboardPage = lazy(() => import('@/pages/DashboardPage'))
 const FarmRoutes = lazy(() => import('@/pages/farm/FarmRoutes'))
 const FactoryRoutes = lazy(() => import('@/pages/factory/FactoryRoutes'))
 const MarketRoutes = lazy(() => import('@/pages/market/MarketRoutes'))
-const CafeRoutes = lazy(() => import('@/pages/cafe/CafeRoutes'))
+// 밀크카페는 팜랜드 자체 운영 — B2B 거래처로만 관리
 const SettingsRoutes = lazy(() => import('@/pages/settings/SettingsRoutes'))
 
 export default function App() {
@@ -29,7 +29,6 @@ export default function App() {
               <Route path="farm/*" element={<ErrorBoundary><FarmRoutes /></ErrorBoundary>} />
               <Route path="factory/*" element={<ErrorBoundary><FactoryRoutes /></ErrorBoundary>} />
               <Route path="market/*" element={<ErrorBoundary><MarketRoutes /></ErrorBoundary>} />
-              <Route path="cafe/*" element={<ErrorBoundary><CafeRoutes /></ErrorBoundary>} />
               <Route path="settings/*" element={<ErrorBoundary><SettingsRoutes /></ErrorBoundary>} />
             </Route>
           </Routes>
