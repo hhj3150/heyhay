@@ -102,24 +102,50 @@ function transformOpsData(raw) {
   ]
 
   const stats = del.checklist_stats || { total: 0, packed: 0, shipped: 0, issues: 0 }
+  const milking = raw.milking || {}
+  const rawSummary = raw.summary || {}
+  const rawAlerts = raw.alerts || []
+  const rawOrders = raw.orders || {}
+
+  // 긴급 액션 생성
+  const urgentActions = []
+  const pendingCount = parseInt(rawSummary.pending_orders || rawOrders.pending_action?.length || 0)
+  if (pendingCount > 0) urgentActions.push({ type: 'pending_orders', count: pendingCount, label: `결제확인 대기 ${pendingCount}건`, path: '/market/orders', color: 'red' })
+  if (!milking.recorded && !milking.today_total) urgentActions.push({ type: 'no_milk', label: '착유량 미입력', path: '/farm/milk', color: 'amber' })
+  if (prod.materials_shortage?.length > 0) urgentActions.push({ type: 'material_shortage', count: prod.materials_shortage.length, label: `자재 부족 ${prod.materials_shortage.length}건`, path: '/factory/packaging', color: 'amber' })
+
+  const totalDeliveries = parseInt(stats.total) || 0
+  const shippedDeliveries = parseInt(stats.shipped) || 0
 
   return {
-    ...raw,
+    date: raw.date || new Date().toISOString().slice(0, 10),
+    progress: { total: totalDeliveries, completed: shippedDeliveries },
+    milkEntered: !!(milking.recorded || milking.today_total),
+    urgentActions,
+    alerts: rawAlerts.slice(0, 5),
     production: {
       items: prodItems,
       label: prod.label || '생산 계획',
       tomorrowDeliveryCount: prod.tomorrow_delivery_count || 0,
       totalMilkNeeded: prod.milk_needed_l || 0,
-      totalMilking: raw.milking?.today_total || 0,
-      d2oAlloc: raw.milking?.d2o || 0,
-      dairyAssocAlloc: raw.milking?.dairy_assoc || 0,
+      totalMilking: milking.today_total || 0,
+      d2oAlloc: milking.d2o || 0,
+      dairyAssocAlloc: milking.dairy_assoc || 0,
     },
     deliveries: {
-      total: stats.total,
-      shipped: stats.shipped,
-      pending: stats.total - stats.shipped,
+      total: totalDeliveries,
+      shipped: shippedDeliveries,
+      pending: totalDeliveries - shippedDeliveries,
       items: deliveryItems,
       label: del.label || '배송 실행',
+    },
+    summary: {
+      revenue: parseInt(rawSummary.today_revenue || 0),
+      shippedCount: shippedDeliveries,
+      totalCount: totalDeliveries,
+      milking: milking.today_total || 0,
+      d2oAlloc: milking.d2o || 0,
+      dairyAssocAlloc: milking.dairy_assoc || 0,
     },
   }
 }
@@ -137,9 +163,13 @@ export default function TodayOpsPage() {
       const res = await apiGet('/dashboard/today-ops')
       if (res.success && res.data) {
         setData(transformOpsData(res.data))
+      } else {
+        // API 실패해도 빈 데이터로 렌더링
+        setData(emptyData())
       }
-    } catch (error) {
-      toast.error('운영 데이터를 불러오지 못했습니다')
+    } catch {
+      // 에러 시 빈 데이터로 표시 (크래시 방지)
+      setData(emptyData())
     } finally {
       setLoading(false)
     }
