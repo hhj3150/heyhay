@@ -16,33 +16,41 @@ import useAuthStore from '@/stores/authStore'
 import { cn } from '@/lib/utils'
 
 const ROLE_PERMISSIONS = {
-  ADMIN: ['dashboard', 'farm', 'factory', 'market', 'settings'],
-  FACTORY: ['dashboard', 'factory'],
-  FARM: ['dashboard', 'farm'],
+  ADMIN: ['home', 'production', 'orders', 'customers', 'analytics', 'settings'],
+  FACTORY: ['home', 'production'],
+  FARM: ['home', 'production'],
 }
 
+// 사이드바 메뉴 — 업무 흐름 순서: 착유→생산→주문→배송→관리
 const NAV_ITEMS = [
-  { id: 'dashboard', label: '오늘의 운영', icon: LayoutDashboard, path: '/', color: 'text-slate-600', children: [
-    { label: '경영 대시보드', icon: BarChart3, path: '/dashboard/overview' },
-  ]},
-  { id: 'farm', label: '목장 관리', icon: Milk, path: '/farm', color: 'text-amber-500', children: [
+  // 1. 홈: 오늘 할 일 전체 보기
+  { id: 'home', label: '오늘의 운영', icon: LayoutDashboard, path: '/', color: 'text-slate-600' },
+  // 2. 착유 → 생산 (원재료 흐름)
+  { id: 'production', label: '착유·생산', icon: Factory, path: '/farm', color: 'text-blue-500', children: [
     { label: '오늘 착유량', icon: Milk, path: '/farm/milk' },
-  ]},
-  { id: 'factory', label: '공장 관리', icon: Factory, path: '/factory', color: 'text-blue-500', children: [
     { label: '생산 계획', icon: ClipboardList, path: '/factory/plan' },
     { label: '공정 현황', icon: Gauge, path: '/factory/dashboard' },
     { label: '자재 관리', icon: Boxes, path: '/factory/packaging' },
   ]},
-  { id: 'market', label: '온라인 마켓', icon: ShoppingCart, path: '/market', color: 'text-emerald-500', children: [
-    { label: '주문 관리', icon: Package, path: '/market/orders' },
-    { label: '구독 관리', icon: CreditCard, path: '/market/subscriptions' },
+  // 3. 주문 → 배송 (판매 흐름)
+  { id: 'orders', label: '주문·배송', icon: Package, path: '/market', color: 'text-emerald-500', children: [
+    { label: '주문 관리', icon: ShoppingCart, path: '/market/orders' },
     { label: '배송 체크', icon: ClipboardCheck, path: '/market/checklist' },
-    { label: 'B2B 거래처', icon: Building2, path: '/market/b2b' },
-    { label: '고객 관리', icon: Users, path: '/market/customers' },
     { label: '배송 스케줄', icon: Calendar, path: '/market/delivery' },
-    { label: '현황 요약', icon: BarChart3, path: '/market/overview' },
   ]},
-  { id: 'settings', label: '설정', icon: Settings, path: '/settings', color: 'text-slate-500', children: [
+  // 4. 고객·거래처 (관계 관리)
+  { id: 'customers', label: '고객·거래처', icon: Users, path: '/market/customers', color: 'text-violet-500', children: [
+    { label: '고객 관리', icon: Users, path: '/market/customers' },
+    { label: '구독 관리', icon: CreditCard, path: '/market/subscriptions' },
+    { label: 'B2B 거래처', icon: Building2, path: '/market/b2b' },
+  ]},
+  // 5. 경영 분석
+  { id: 'analytics', label: '경영 분석', icon: BarChart3, path: '/dashboard/overview', color: 'text-amber-500', children: [
+    { label: '경영 대시보드', icon: BarChart3, path: '/dashboard/overview' },
+    { label: '현황 요약', icon:BarChart3, path: '/market/overview' },
+  ]},
+  // 6. 설정
+  { id: 'settings', label: '설정', icon: Settings, path: '/settings', color: 'text-slate-400', children: [
     { label: '제품 단가', icon: DollarSign, path: '/settings/prices' },
     { label: '시스템 설정', icon: Cog, path: '/settings/system' },
   ]},
