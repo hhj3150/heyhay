@@ -5,6 +5,7 @@ import SubscriptionDashboard from './SubscriptionDashboard'
 import CustomerCRM from './CustomerCRM'
 import DeliverySchedule from './DeliverySchedule'
 import DeliveryChecklist from './DeliveryChecklist'
+import DeliveryManifest from './DeliveryManifest'
 import B2BPartners from './B2BPartners'
 
 export default function MarketRoutes() {
@@ -17,6 +18,7 @@ export default function MarketRoutes() {
       <Route path="customers" element={<CustomerCRM />} />
       <Route path="delivery" element={<DeliverySchedule />} />
       <Route path="checklist" element={<DeliveryChecklist />} />
+      <Route path="manifest" element={<DeliveryManifest />} />
       <Route path="b2b" element={<B2BPartners />} />
     </Routes>
   )

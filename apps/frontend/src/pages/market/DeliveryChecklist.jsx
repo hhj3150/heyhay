@@ -9,10 +9,11 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { apiGet, apiPost, apiPut } from '@/lib/api'
+import { useNavigate } from 'react-router-dom'
 import {
   ClipboardCheck, PackageCheck, Truck, CheckCircle2, AlertTriangle,
   RefreshCw, ChevronLeft, ChevronRight, Search, Package, Shield,
-  Snowflake, Phone, MapPin,
+  Snowflake, Phone, MapPin, Printer,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import SwipeableItem from '@/components/mobile/SwipeableItem'
@@ -39,6 +40,7 @@ export default function DeliveryChecklist() {
   const [search, setSearch] = useState('')
   const [shipModal, setShipModal] = useState(null)
   const [shipForm, setShipForm] = useState({ courier: 'CJ대한통운', tracking_number: '' })
+  const navigate = useNavigate()
 
   // KST 기준 오늘 날짜 계산 (toISOString은 UTC 기준이라 KST에서 날짜가 달라질 수 있음)
   const getKstDateStr = (offsetDays = 0) => {
@@ -139,6 +141,10 @@ export default function DeliveryChecklist() {
           <Button variant="outline" size="sm" className="touch-target touch-feedback" onClick={() => setDateOffset(0)}>오늘</Button>
           <Button variant="outline" size="sm" className="touch-target touch-feedback" onClick={() => setDateOffset((d) => d + 1)}>
             <ChevronRight className="w-4 h-4" />
+          </Button>
+          <Button size="sm" variant="outline" className="h-10 touch-feedback" onClick={() => navigate(`/market/manifest?date=${dateStr}`)}>
+            <Printer className="w-4 h-4 mr-1" />
+            <span className="hidden sm:inline">배송원장</span>
           </Button>
           <Button size="sm" className="flex-1 sm:flex-none h-10 touch-feedback" onClick={generateChecklist}>
             <RefreshCw className="w-4 h-4 mr-1" />
