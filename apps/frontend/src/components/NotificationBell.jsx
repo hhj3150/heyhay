@@ -39,7 +39,10 @@ export default function NotificationBell() {
     if (!token) return
 
     // EventSource는 헤더 설정 불가 → 쿼리스트링으로 토큰 전달
-    const baseUrl = import.meta.env.DEV ? 'http://localhost:3001' : ''
+    // Netlify는 SSE 스트리밍 미지원 → 프로덕션에서 Railway URL로 직접 연결
+    const baseUrl = import.meta.env.DEV
+      ? 'http://localhost:3001'
+      : (import.meta.env.VITE_API_URL || '')
     const eventSource = new EventSource(`${baseUrl}/api/v1/dashboard/sse?token=${encodeURIComponent(token)}`)
     sseRef.current = eventSource
 

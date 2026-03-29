@@ -7,7 +7,12 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- TimescaleDB (착유량·센서 시계열 데이터용)
-CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
+-- Railway 등 표준 PostgreSQL 환경에서는 미설치 → 조용히 건너뜀
+DO $$ BEGIN
+  CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'TimescaleDB 미설치 환경 — 시계열 최적화 비활성화 (표준 PostgreSQL로 동작)';
+END $$;
 
 -- ============================================================
 -- 사용자 (인증/권한)
