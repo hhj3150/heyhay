@@ -3,6 +3,7 @@ import FactoryDashboard from './FactoryDashboard'
 import ProductionPlan from './ProductionPlan'
 import PackagingPage from './PackagingPage'
 import PackagingOrders from './PackagingOrders'
+import CCPRecordPage from './CCPRecordPage'
 
 export default function FactoryRoutes() {
   return (
@@ -10,6 +11,7 @@ export default function FactoryRoutes() {
       <Route index element={<Navigate to="plan" replace />} />
       <Route path="dashboard" element={<FactoryDashboard />} />
       <Route path="plan" element={<ProductionPlan />} />
+      <Route path="ccp" element={<CCPRecordPage />} />
       <Route path="packaging" element={<PackagingPage />} />
       <Route path="packaging/orders" element={<PackagingOrders />} />
     </Routes>

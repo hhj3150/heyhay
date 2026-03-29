@@ -9,7 +9,7 @@ import {
   LogOut, ChevronLeft, ChevronRight, Menu, X,
   Package, CreditCard, BarChart3, Users, Calendar,
   DollarSign, ClipboardList, Gauge, Building2, ClipboardCheck,
-  Settings, Cog, Boxes,
+  Settings, Cog, Boxes, Thermometer,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import useAuthStore from '@/stores/authStore'
@@ -29,6 +29,7 @@ const NAV_ITEMS = [
   { id: 'production', label: '착유·생산', icon: Factory, path: '/farm', color: 'text-blue-500', children: [
     { label: '오늘 착유량', icon: Milk, path: '/farm/milk' },
     { label: '생산 계획', icon: ClipboardList, path: '/factory/plan' },
+    { label: 'CCP 기록', icon: Thermometer, path: '/factory/ccp' },
     { label: '공정 현황', icon: Gauge, path: '/factory/dashboard' },
     { label: '자재 관리', icon: Boxes, path: '/factory/packaging' },
   ]},

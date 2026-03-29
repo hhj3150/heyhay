@@ -68,6 +68,10 @@ if (require.main === module) {
   app.listen(env.port, () => {
     console.log(`[HEY HAY MILK ERP] 서버 시작: http://localhost:${env.port}`)
     console.log(`[환경] ${env.nodeEnv}`)
+
+    // 자동 스케줄러 시작 (ENABLE_SCHEDULER=true 일 때만)
+    const scheduler = require('./scheduler')
+    scheduler.init()
   })
 }
 
