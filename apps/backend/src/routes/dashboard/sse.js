@@ -1,9 +1,13 @@
 /**
  * @fileoverview SSE (Server-Sent Events) 실시간 알림
- * GET /api/v1/dashboard/sse — 클라이언트 SSE 연결
+ * GET /api/v1/dashboard/sse?token=<access_token> — 클라이언트 SSE 연결
  * broadcastAlert(alert) — 모든 연결된 클라이언트에 알림 push
+ *
+ * 참고: EventSource API는 Authorization 헤더 설정 불가 → 쿼리스트링으로 토큰 전달
  */
 const express = require('express')
+const jwt = require('jsonwebtoken')
+const env = require('../../config/env')
 
 const router = express.Router()
 
@@ -33,8 +37,19 @@ const broadcastAlert = (alert) => {
   }
 }
 
-/** GET / — SSE 연결 */
+/** GET / — SSE 연결 (쿼리스트링 토큰 인증) */
 router.get('/', (req, res) => {
+  // EventSource는 헤더 설정 불가 → ?token=<jwt> 방식으로 인증
+  const token = req.query.token
+  if (!token) {
+    return res.status(401).json({ success: false, error: { code: 'AUTH_REQUIRED', message: '토큰이 필요합니다' } })
+  }
+  try {
+    jwt.verify(token, env.jwt.secret)
+  } catch {
+    return res.status(401).json({ success: false, error: { code: 'TOKEN_INVALID', message: '유효하지 않은 토큰입니다' } })
+  }
+
   // SSE 헤더 설정
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',

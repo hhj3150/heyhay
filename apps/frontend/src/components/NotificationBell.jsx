@@ -38,8 +38,9 @@ export default function NotificationBell() {
     const token = getAccessToken()
     if (!token) return
 
+    // EventSource는 헤더 설정 불가 → 쿼리스트링으로 토큰 전달
     const baseUrl = import.meta.env.DEV ? 'http://localhost:3001' : ''
-    const eventSource = new EventSource(`${baseUrl}/api/v1/dashboard/sse`)
+    const eventSource = new EventSource(`${baseUrl}/api/v1/dashboard/sse?token=${encodeURIComponent(token)}`)
     sseRef.current = eventSource
 
     eventSource.addEventListener('alert', (event) => {
