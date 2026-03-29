@@ -178,7 +178,13 @@ router.get('/:id', async (req, res, next) => {
 router.put('/:id', validate(updateAnimalSchema), async (req, res, next) => {
   try {
     const fields = req.body
-    const keys = Object.keys(fields)
+    // 허용된 컬럼만 업데이트 (SQL 인젝션 방지)
+    const allowedColumns = [
+      'name', 'cow_id', 'birthdate', 'breed', 'gender', 'status',
+      'acquisition_type', 'acquisition_date', 'a2_type', 'dam_id',
+      'notes', 'is_donor', 'body_weight', 'body_condition_score',
+    ]
+    const keys = Object.keys(fields).filter((k) => allowedColumns.includes(k))
 
     if (keys.length === 0) {
       return res.status(400).json(apiError('NO_FIELDS', '수정할 항목이 없습니다'))

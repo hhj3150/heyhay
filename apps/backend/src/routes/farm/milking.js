@@ -219,24 +219,6 @@ router.post('/daily-total', async (req, res, next) => {
     }
     const targetDate = date || new Date().toISOString().split('T')[0]
 
-    // 테이블 없으면 생성
-    await query(`
-      CREATE TABLE IF NOT EXISTS daily_milk_totals (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        date DATE UNIQUE NOT NULL,
-        total_l NUMERIC(8,2) NOT NULL,
-        dairy_assoc_l NUMERIC(8,2) DEFAULT 0,
-        d2o_l NUMERIC(8,2) DEFAULT 0,
-        recorded_by UUID,
-        created_at TIMESTAMPTZ DEFAULT NOW(),
-        updated_at TIMESTAMPTZ DEFAULT NOW()
-      )
-    `).catch(() => {})
-
-    // 컬럼 추가 (기존 테이블 호환)
-    await query(`ALTER TABLE daily_milk_totals ADD COLUMN IF NOT EXISTS dairy_assoc_l NUMERIC(8,2) DEFAULT 0`).catch(() => {})
-    await query(`ALTER TABLE daily_milk_totals ADD COLUMN IF NOT EXISTS d2o_l NUMERIC(8,2) DEFAULT 0`).catch(() => {})
-
     // 진흥회 = 총 착유량 - D2O (자동 계산)
     const d2oAmount = d2o_l || 0
     const dairyAmount = dairy_assoc_l || Math.max(0, amount_l - d2oAmount)
@@ -279,14 +261,6 @@ router.get('/monthly-dairy', async (req, res, next) => {
 /** GET /dairy-price — 납유단가 조회 */
 router.get('/dairy-price', async (req, res, next) => {
   try {
-    await query(`
-      CREATE TABLE IF NOT EXISTS settings (
-        key VARCHAR(50) PRIMARY KEY,
-        value TEXT NOT NULL,
-        updated_at TIMESTAMPTZ DEFAULT NOW()
-      )
-    `).catch(() => {})
-
     const [dairyRes, d2oRes] = await Promise.all([
       query(`SELECT value FROM settings WHERE key = 'dairy_unit_price'`),
       query(`SELECT value FROM settings WHERE key = 'd2o_unit_price'`),
@@ -303,14 +277,6 @@ router.get('/dairy-price', async (req, res, next) => {
 router.post('/dairy-price', async (req, res, next) => {
   try {
     const { dairy_price, d2o_price } = req.body
-
-    await query(`
-      CREATE TABLE IF NOT EXISTS settings (
-        key VARCHAR(50) PRIMARY KEY,
-        value TEXT NOT NULL,
-        updated_at TIMESTAMPTZ DEFAULT NOW()
-      )
-    `).catch(() => {})
 
     if (dairy_price) {
       await query(`

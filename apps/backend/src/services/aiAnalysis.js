@@ -18,9 +18,9 @@ const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages'
  * @returns {Promise<string>} AI 분석 결과
  */
 const callClaude = async (systemPrompt, userMessage) => {
-  const apiKey = process.env.CLAUDE_API_KEY
+  const apiKey = process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY
   if (!apiKey) {
-    throw new Error('CLAUDE_API_KEY 환경변수가 설정되지 않았습니다')
+    throw new Error('ANTHROPIC_API_KEY 환경변수가 설정되지 않았습니다')
   }
 
   const res = await fetch(CLAUDE_API_URL, {
@@ -144,7 +144,7 @@ const generateDailyReport = async () => {
 
   // 이상치가 있으면 Claude에게 분석 요청
   let aiReport = null
-  if (hasIssues && process.env.CLAUDE_API_KEY) {
+  if (hasIssues && (process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY)) {
     const systemPrompt = `당신은 HEY HAY MILK 목장의 수의사이자 유가공 전문가입니다.
 저지종 A2 우유를 생산하는 60두 규모 목장의 일일 보고서를 작성합니다.
 한국어로 간결하게 작성하되, 긴급도가 높은 항목을 먼저 보고하세요.

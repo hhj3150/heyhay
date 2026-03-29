@@ -28,8 +28,10 @@ app.use(cors({
         origin.endsWith('송영신목장.com') ||
         origin.includes('xn--')) {
       callback(null, true)
+    } else if (process.env.NODE_ENV === 'production') {
+      callback(new Error(`CORS 미허용 origin: ${origin}`))
     } else {
-      callback(null, true) // 개발 편의상 전체 허용 (프로덕션에서 제한)
+      callback(null, true) // 개발 환경에서만 전체 허용
     }
   },
   credentials: true,

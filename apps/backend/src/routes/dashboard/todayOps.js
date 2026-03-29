@@ -173,7 +173,12 @@ async function fetchProduction(todayKst) {
   const subSkuMap = {}
   const subBreakdown = {} // { sku_code: [{customer_name, quantity, address_short}] }
   for (const row of subsRes.rows) {
-    const items = typeof row.items === 'string' ? JSON.parse(row.items) : row.items
+    let items
+    try {
+      items = typeof row.items === 'string' ? JSON.parse(row.items) : row.items
+    } catch {
+      items = []
+    }
     if (!Array.isArray(items)) continue
     const addressShort = shortenAddress(row.shipping_address)
     for (const item of items) {
@@ -210,7 +215,12 @@ async function fetchProduction(todayKst) {
   }
 
   for (const row of ordersRes.rows) {
-    const items = typeof row.items === 'string' ? JSON.parse(row.items) : row.items
+    let items
+    try {
+      items = typeof row.items === 'string' ? JSON.parse(row.items) : row.items
+    } catch {
+      items = []
+    }
     if (!Array.isArray(items)) continue
     const orderNumber = orderNumberMap[row.source_id] || ''
     for (const item of items) {

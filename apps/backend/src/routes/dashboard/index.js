@@ -20,19 +20,19 @@ router.get('/kpi', async (req, res, next) => {
           COALESCE((SELECT total_l FROM daily_milk_totals WHERE date = CURRENT_DATE), 0) AS today_milk,
           COALESCE((SELECT total_l FROM daily_milk_totals WHERE date = CURRENT_DATE - 1), 0) AS yesterday_milk,
           0 AS today_heads
-      `).catch(() => ({ rows: [{ today_milk: 0, yesterday_milk: 0, today_heads: 0 }] })),
+      `).catch((e) => { console.error('[KPI] 착유량 조회 실패:', e.message); return { rows: [{ today_milk: 0, yesterday_milk: 0, today_heads: 0 }] } }),
       // 공장: 오늘 생산 배치 수
       query(`
         SELECT COUNT(*) AS today_batches
         FROM production_batches
         WHERE produced_at = CURRENT_DATE AND deleted_at IS NULL
-      `).catch(() => ({ rows: [{ today_batches: 0 }] })),
+      `).catch((e) => { console.error('[KPI] 생산배치 조회 실패:', e.message); return { rows: [{ today_batches: 0 }] } }),
       // 원유 입고
       query(`
         SELECT COALESCE(SUM(amount_l), 0) AS today_raw_milk
         FROM raw_milk_receipts
         WHERE received_date = CURRENT_DATE AND deleted_at IS NULL AND is_rejected = false
-      `).catch(() => ({ rows: [{ today_raw_milk: 0 }] })),
+      `).catch((e) => { console.error('[KPI] 원유입고 조회 실패:', e.message); return { rows: [{ today_raw_milk: 0 }] } }),
       // 주문: 오늘 + 월 매출
       query(`
         SELECT
@@ -40,24 +40,24 @@ router.get('/kpi', async (req, res, next) => {
           COALESCE(SUM(total_amount) FILTER (WHERE DATE(created_at) = CURRENT_DATE AND deleted_at IS NULL), 0) AS today_order_revenue,
           COALESCE(SUM(total_amount) FILTER (WHERE created_at >= DATE_TRUNC('month', NOW()) AND deleted_at IS NULL), 0) AS month_revenue
         FROM orders
-      `).catch(() => ({ rows: [{ today_orders: 0, today_order_revenue: 0, month_revenue: 0 }] })),
+      `).catch((e) => { console.error('[KPI] 주문 조회 실패:', e.message); return { rows: [{ today_orders: 0, today_order_revenue: 0, month_revenue: 0 }] } }),
       // 구독
       query(`
         SELECT COUNT(*) AS active_subs
         FROM subscriptions
         WHERE status = 'ACTIVE' AND deleted_at IS NULL
-      `).catch(() => ({ rows: [{ active_subs: 0 }] })),
+      `).catch((e) => { console.error('[KPI] 구독 조회 실패:', e.message); return { rows: [{ active_subs: 0 }] } }),
       // 카페 매출
       query(`
         SELECT
           COALESCE(SUM(total_amount) FILTER (WHERE sale_date = CURRENT_DATE), 0) AS today_cafe,
           COALESCE(SUM(total_amount) FILTER (WHERE sale_date >= DATE_TRUNC('month', CURRENT_DATE)), 0) AS month_cafe
         FROM cafe_sales
-      `).catch(() => ({ rows: [{ today_cafe: 0, month_cafe: 0 }] })),
+      `).catch((e) => { console.error('[KPI] 카페매출 조회 실패:', e.message); return { rows: [{ today_cafe: 0, month_cafe: 0 }] } }),
       // 미확인 알림
       query(`
         SELECT COUNT(*) AS unread FROM alerts WHERE is_read = false
-      `).catch(() => ({ rows: [{ unread: 0 }] })),
+      `).catch((e) => { console.error('[KPI] 알림 조회 실패:', e.message); return { rows: [{ unread: 0 }] } }),
     ])
 
     const todayMilk = parseFloat(milk.rows[0].today_milk)

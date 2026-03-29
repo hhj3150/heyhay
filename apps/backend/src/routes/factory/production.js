@@ -79,6 +79,14 @@ router.post('/batches', validate(batchSchema), async (req, res, next) => {
     const unitCost = b.quantity > 0 ? Math.round(totalCost / b.quantity) : 0
 
     const result = await transaction(async (client) => {
+      // 배치 ID 재계산 (트랜잭션 내 락으로 레이스 컨디션 방지)
+      const seqLocked = await client.query(`
+        SELECT COUNT(*) + 1 AS seq FROM production_batches
+        WHERE batch_id LIKE $1
+        FOR UPDATE
+      `, [`${dateStr}-${sku.code}-%`])
+      const safeBatchId = `${dateStr}-${sku.code}-${String(seqLocked.rows[0].seq).padStart(3, '0')}`
+
       // 배치 등록
       const batchResult = await client.query(`
         INSERT INTO production_batches (
@@ -88,7 +96,7 @@ router.post('/batches', validate(batchSchema), async (req, res, next) => {
         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
         RETURNING *
       `, [
-        batchId, b.sku_id, b.produced_at, b.quantity, b.raw_milk_used_l,
+        safeBatchId, b.sku_id, b.produced_at, b.quantity, b.raw_milk_used_l,
         b.material_cost, b.labor_cost, b.overhead_cost, unitCost,
         expiryDate, b.raw_milk_receipt_id, b.notes,
       ])

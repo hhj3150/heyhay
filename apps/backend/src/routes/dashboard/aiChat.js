@@ -490,7 +490,7 @@ router.post('/ai-chat', async (req, res, next) => {
       return res.json(apiResponse(result))
     }
 
-    const apiKey = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.Claude_API_Key || process.env.claude_api_key
+    const apiKey = process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY
     if (!apiKey) {
       const context = await gatherContext()
       const localResult = generateLocalAnswer(message, context)

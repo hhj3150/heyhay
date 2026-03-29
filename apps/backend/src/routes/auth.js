@@ -146,6 +146,10 @@ router.post('/change-password', authenticate, validate(changePasswordSchema), as
       [req.user.id],
     )
 
+    if (result.rows.length === 0 || !result.rows[0].password_hash) {
+      return res.status(400).json(apiError('USER_NOT_FOUND', '사용자를 찾을 수 없습니다'))
+    }
+
     const isValid = await bcrypt.compare(currentPassword, result.rows[0].password_hash)
     if (!isValid) {
       return res.status(400).json(apiError('WRONG_PASSWORD', '현재 비밀번호가 잘못되었습니다'))
