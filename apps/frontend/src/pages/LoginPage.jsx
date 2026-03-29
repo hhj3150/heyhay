@@ -81,21 +81,28 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 to-slate-100 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center space-y-4">
-          <div className="mx-auto w-16 h-16 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-black text-2xl">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
+      {/* 배경 장식 */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full bg-amber-500/5 blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full bg-blue-500/5 blur-3xl" />
+      </div>
+
+      <div className="relative w-full max-w-sm">
+        {/* 로고 영역 */}
+        <div className="text-center mb-8">
+          <div className="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center font-black text-2xl text-white shadow-2xl shadow-amber-500/30 mb-4">
             H
           </div>
-          <div>
-            <CardTitle className="text-2xl">HEY HAY MILK</CardTitle>
-            <CardDescription className="mt-1">통합 ERP 시스템</CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent>
+          <h1 className="text-2xl font-bold text-white tracking-tight">HEY HAY MILK</h1>
+          <p className="text-slate-400 text-sm mt-1 tracking-widest uppercase">ERP System</p>
+        </div>
+
+        {/* 로그인 카드 */}
+        <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 shadow-2xl">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">아이디</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">아이디</label>
               <Input
                 type="text"
                 placeholder="아이디를 입력하세요"
@@ -104,10 +111,11 @@ export default function LoginPage() {
                 autoFocus
                 required
                 disabled={isLocked}
+                className="bg-white/10 border-white/10 text-white placeholder:text-slate-500 focus:border-amber-400 focus:ring-amber-400/20"
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">비밀번호</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">비밀번호</label>
               <div className="relative">
                 <Input
                   type={showPassword ? 'text' : 'password'}
@@ -116,50 +124,43 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={isLocked}
-                  className="pr-10"
+                  className="bg-white/10 border-white/10 text-white placeholder:text-slate-500 focus:border-amber-400 focus:ring-amber-400/20 pr-10"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
                   tabIndex={-1}
                   aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 표시'}
                 >
-                  {showPassword
-                    ? <EyeOff className="w-4 h-4" />
-                    : <Eye className="w-4 h-4" />}
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
             {error && (
-              <p className="text-sm text-red-500 bg-red-50 px-3 py-2 rounded-md">{error}</p>
+              <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-lg">{error}</p>
             )}
-
             {isLocked && (
-              <p className="text-sm text-amber-600 bg-amber-50 px-3 py-2 rounded-md">
-                로그인 시도가 {MAX_FAIL_COUNT}회 실패했습니다. {cooldown}초 후 다시 시도하세요.
+              <p className="text-sm text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-2 rounded-lg">
+                {MAX_FAIL_COUNT}회 실패. {cooldown}초 후 재시도 가능
               </p>
             )}
 
             <Button
               type="submit"
-              className="w-full bg-amber-500 hover:bg-amber-600"
+              className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-white font-semibold shadow-lg shadow-amber-500/25 border-0 mt-2"
               disabled={isLoading || isLocked}
             >
-              {isLocked
-                ? `${cooldown}초 후 재시도`
-                : isLoading
-                  ? '로그인 중...'
-                  : '로그인'}
+              {isLocked ? `${cooldown}초 후 재시도` : isLoading ? '로그인 중...' : '로그인'}
             </Button>
           </form>
+        </div>
 
-          <p className="mt-6 text-center text-xs text-slate-400">
-            Farm-to-Consumer 경영 플랫폼
-          </p>
-        </CardContent>
-      </Card>
+        <p className="mt-6 text-center text-xs text-slate-600">
+          Farm-to-Consumer 경영 플랫폼 · D2O 농업회사법인
+        </p>
+      </div>
     </div>
   )
 }

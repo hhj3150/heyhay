@@ -32,7 +32,7 @@ export default function AppLayout() {
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto bg-slate-50 p-3 pt-14 pb-20 lg:p-6 lg:pt-6 lg:pb-6" role="main">
+      <main className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50 p-3 pt-14 pb-20 lg:p-6 lg:pt-6 lg:pb-6" role="main">
         {/* 상단 알림 바 (모바일+데스크톱) */}
         <div className="fixed top-0 right-0 z-40 p-2 lg:p-3">
           <NotificationBell />

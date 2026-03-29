@@ -246,13 +246,14 @@ export default function TodayOpsPage() {
       {/* 풀투리프레시 인디케이터 */}
       <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
 
-      {/* 1. 헤더 — 날짜 + 진행률 */}
+      {/* 1. 헤더 — 날짜 + KPI + 진행률 */}
       <HeaderSection
         date={date}
         progressPercent={progressPercent}
         progress={progress}
         milkEntered={milkEntered}
         onRefresh={fetchData}
+        summary={summary}
       />
 
       {/* 2. 긴급 액션 카드 — 가로 snap 스크롤 */}
@@ -284,53 +285,98 @@ export default function TodayOpsPage() {
    섹션 컴포넌트들
    ═══════════════════════════════════════ */
 
-/** 헤더: 날짜 + 진행률 바 */
-function HeaderSection({ date, progressPercent, progress, milkEntered, onRefresh }) {
+/** 헤더: 날짜 배너 + KPI 퀵스탯 + 진행률 바 */
+function HeaderSection({ date, progressPercent, progress, milkEntered, onRefresh, summary = {} }) {
+  const barColor = progressPercent >= 100 ? 'bg-emerald-500' : progressPercent >= 50 ? 'bg-blue-500' : 'bg-amber-500'
+
+  const kpiItems = [
+    {
+      label: '착유량',
+      value: summary.milking ? `${summary.milking}L` : '–',
+      icon: Droplets,
+      iconBg: 'bg-amber-500/15',
+      iconColor: 'text-amber-400',
+      valueCls: 'text-amber-400',
+    },
+    {
+      label: '배송 완료',
+      value: progress.total > 0 ? `${progress.completed}/${progress.total}` : '–',
+      icon: Send,
+      iconBg: 'bg-emerald-500/15',
+      iconColor: 'text-emerald-400',
+      valueCls: 'text-emerald-400',
+    },
+    {
+      label: '오늘 매출',
+      value: summary.revenue > 0 ? `${(summary.revenue / 10000).toFixed(0)}만` : '–',
+      icon: BarChart3,
+      iconBg: 'bg-blue-500/15',
+      iconColor: 'text-blue-400',
+      valueCls: 'text-blue-400',
+    },
+    {
+      label: 'D2O 배분',
+      value: summary.d2oAlloc ? `${summary.d2oAlloc}L` : '–',
+      icon: Milk,
+      iconBg: 'bg-violet-500/15',
+      iconColor: 'text-violet-400',
+      valueCls: 'text-violet-400',
+    },
+  ]
+
   return (
-    <div className="space-y-2">
+    <div className="space-y-2.5">
+      {/* 날짜 + 새로고침 */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-base sm:text-lg font-bold text-slate-800 leading-tight">
             {formatKoreanDate(date)}
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">오늘의 운영</p>
+          <p className="text-xs text-slate-400 mt-0.5 font-medium tracking-wide uppercase">오늘의 운영 커맨드센터</p>
         </div>
         <button
           onClick={onRefresh}
-          className="p-2.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-white transition-colors touch-target touch-feedback"
+          className="p-2.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-white transition-all touch-target"
           aria-label="새로고침"
         >
           <RefreshCw className="w-5 h-5" />
         </button>
       </div>
 
+      {/* KPI 퀵스탯 4카드 */}
+      <div className="grid grid-cols-4 gap-2">
+        {kpiItems.map(({ label, value, icon: Icon, iconBg, iconColor, valueCls }) => (
+          <div key={label} className="bg-slate-900 rounded-xl p-2.5 flex flex-col gap-1.5 shadow-sm border border-white/5">
+            <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center', iconBg)}>
+              <Icon className={cn('w-3.5 h-3.5', iconColor)} />
+            </div>
+            <p className={cn('text-sm font-bold leading-none tabular-nums', valueCls)}>{value}</p>
+            <p className="text-[10px] text-slate-500 leading-none">{label}</p>
+          </div>
+        ))}
+      </div>
+
       {/* 진행률 바 */}
       <div className="bg-white rounded-xl p-3 shadow-sm border border-slate-100">
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-sm font-semibold text-slate-700">
-            {progressPercent}% 완료
-          </span>
-          <span className="text-xs text-slate-500">
-            {progress.completed}/{progress.total}건 발송
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-slate-800">{progressPercent}%</span>
+            <span className="text-xs text-slate-400">배송 완료</span>
+          </div>
+          <span className="text-xs font-medium text-slate-500 bg-slate-50 px-2 py-0.5 rounded-full">
+            {progress.completed} / {progress.total}건
           </span>
         </div>
-        <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
+        <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
           <div
-            className={cn(
-              'h-full rounded-full transition-all duration-500',
-              progressPercent >= 100
-                ? 'bg-emerald-500'
-                : progressPercent >= 50
-                  ? 'bg-blue-500'
-                  : 'bg-amber-500',
-            )}
+            className={cn('h-full rounded-full transition-all duration-700', barColor)}
             style={{ width: `${Math.min(progressPercent, 100)}%` }}
           />
         </div>
         {!milkEntered && (
           <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-600 font-medium">
             <AlertTriangle className="w-3.5 h-3.5" />
-            착유량 미입력
+            착유량 미입력 — 입력이 필요합니다
           </div>
         )}
       </div>
