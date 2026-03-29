@@ -10,6 +10,7 @@ const { z } = require('zod')
 const { query } = require('../../config/database')
 const { validate } = require('../../middleware/validate')
 const { apiResponse, apiError, CCP_LIMITS } = require('../../lib/shared')
+const { broadcastAlert } = require('../dashboard/sse')
 
 const router = express.Router()
 
@@ -99,16 +100,21 @@ router.post('/', validate(processSchema), async (req, res, next) => {
       isDeviated, deviationReason, req.user?.id, p.notes,
     ])
 
-    // CCP 이탈 시 P1 알림 생성
+    // CCP 이탈 시 P1 알림 생성 + SSE 실시간 push
     if (isDeviated) {
+      const alertTitle = `CCP 이탈 — ${p.ccp_id}`
       await query(`
         INSERT INTO alerts (priority, alert_type, title, message, module, reference_id, reference_type, target_roles)
         VALUES ('P1', 'CCP_DEVIATION', $1, $2, 'factory', $3, 'process_records', '["ADMIN", "FACTORY"]')
-      `, [
-        `CCP 이탈 — ${p.ccp_id}`,
-        deviationReason,
-        result.rows[0].id,
-      ])
+      `, [alertTitle, deviationReason, result.rows[0].id])
+
+      broadcastAlert({
+        priority: 'P1',
+        alert_type: 'CCP_DEVIATION',
+        title: alertTitle,
+        message: deviationReason,
+        module: 'factory',
+      })
     }
 
     res.status(201).json(apiResponse({

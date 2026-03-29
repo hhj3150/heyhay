@@ -10,6 +10,7 @@ import useAuthStore from '@/stores/authStore'
 import { ArrowLeft, Home } from 'lucide-react'
 import { Toaster } from 'sonner'
 import OfflineIndicator from '@/components/OfflineIndicator'
+import NotificationBell from '@/components/NotificationBell'
 
 export default function AppLayout() {
   const { isAuthenticated, initAuth } = useAuthStore()
@@ -32,6 +33,10 @@ export default function AppLayout() {
     <div className="flex h-screen overflow-hidden">
       <Sidebar />
       <main className="flex-1 overflow-y-auto bg-slate-50 p-3 pt-14 pb-20 lg:p-6 lg:pt-6 lg:pb-6" role="main">
+        {/* 상단 알림 바 (모바일+데스크톱) */}
+        <div className="fixed top-0 right-0 z-40 p-2 lg:p-3">
+          <NotificationBell />
+        </div>
         <OfflineIndicator />
         {!isHome && (
           <div className="flex items-center gap-2 mb-4">

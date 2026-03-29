@@ -166,4 +166,8 @@ router.use('/', require('./todayOps'))
 // AI 음성 대화
 router.use('/', require('./aiChat'))
 
+// SSE 실시간 알림
+const { router: sseRouter } = require('./sse')
+router.use('/sse', sseRouter)
+
 module.exports = router

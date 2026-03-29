@@ -9,17 +9,20 @@
  */
 const cron = require('node-cron')
 const { query, transaction } = require('./config/database')
+const { broadcastAlert } = require('./routes/dashboard/sse')
 
 // 스케줄러 활성화 여부
 const isEnabled = () => process.env.ENABLE_SCHEDULER === 'true'
 
-// 작업 실패 시 알림 생성
+// 작업 실패 시 알림 생성 + SSE 실시간 push
 const createAlert = async (title, message, priority = 'P2') => {
   try {
     await query(`
       INSERT INTO alerts (module, priority, alert_type, title, message, target_roles)
       VALUES ('system', $1, 'SCHEDULER_ERROR', $2, $3, '["ADMIN"]')
     `, [priority, title, message])
+
+    broadcastAlert({ priority, alert_type: 'SCHEDULER_ERROR', title, message, module: 'system' })
   } catch (e) {
     console.error('[스케줄러] 알림 생성 실패:', e.message)
   }
