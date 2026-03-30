@@ -46,7 +46,8 @@ export default function NotificationBell() {
     const eventSource = new EventSource(`${baseUrl}/api/v1/dashboard/sse?token=${encodeURIComponent(token)}`)
     sseRef.current = eventSource
 
-    eventSource.addEventListener('alert', (event) => {
+    // 이벤트 핸들러를 변수로 분리하여 cleanup 시 제거 가능
+    const handleAlert = (event) => {
       try {
         const alert = JSON.parse(event.data)
 
@@ -67,17 +68,22 @@ export default function NotificationBell() {
       } catch {
         // 파싱 실패 무시
       }
-    })
+    }
 
-    eventSource.addEventListener('connected', () => {
+    const handleConnected = () => {
       fetchAlerts()
-    })
+    }
+
+    eventSource.addEventListener('alert', handleAlert)
+    eventSource.addEventListener('connected', handleConnected)
 
     eventSource.onerror = () => {
       // 자동 재연결 (EventSource 기본 동작)
     }
 
     return () => {
+      eventSource.removeEventListener('alert', handleAlert)
+      eventSource.removeEventListener('connected', handleConnected)
       eventSource.close()
       sseRef.current = null
     }

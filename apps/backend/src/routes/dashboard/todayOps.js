@@ -244,7 +244,7 @@ async function fetchProduction(todayKst) {
   const skuNameMap = {}
   for (const row of b2bRes.rows) {
     const code = row.sku_code
-    const qty = parseInt(row.qty)
+    const qty = parseInt(row.qty, 10)
     b2bSkuMap[code] = (b2bSkuMap[code] || 0) + qty
     skuNameMap[code] = row.sku_name
     if (!b2bBreakdown[code]) {
@@ -312,7 +312,10 @@ async function fetchProduction(todayKst) {
     shortage: m.safety_stock - m.current_stock,
   }))
 
-  const productionPlanExists = parseInt(prodPlanRes.rows[0].cnt) > 0
+  // null 참조 방어: prodPlanRes.rows가 비어있을 수 있음
+  const productionPlanExists = prodPlanRes.rows.length > 0
+    ? parseInt(prodPlanRes.rows[0].cnt, 10) > 0
+    : false
 
   // 내일 배송 총 건수 (생산 필요 요약용)
   const tomorrowDeliveryCount = subsRes.rows.length + ordersRes.rows.length + b2bRes.rows.length
@@ -392,7 +395,10 @@ async function fetchDeliveries(todayKst) {
     `, [todayKst]).catch(() => ({ rows: [{ total: 0, packed: 0, shipped: 0, issues: 0 }] })),
   ])
 
-  const stats = statsRes.rows[0]
+  // null 참조 방어: statsRes.rows가 비어있을 수 있음
+  const stats = statsRes.rows.length > 0
+    ? statsRes.rows[0]
+    : { total: 0, packed: 0, shipped: 0, issues: 0 }
 
   return {
     label: '오늘 배송 (어제 생산분)',
@@ -400,10 +406,10 @@ async function fetchDeliveries(todayKst) {
     orders: orderDeliveries.rows,
     b2b: b2bDeliveries.rows,
     checklist_stats: {
-      total: parseInt(stats.total),
-      packed: parseInt(stats.packed),
-      shipped: parseInt(stats.shipped),
-      issues: parseInt(stats.issues),
+      total: parseInt(stats.total, 10),
+      packed: parseInt(stats.packed, 10),
+      shipped: parseInt(stats.shipped, 10),
+      issues: parseInt(stats.issues, 10),
     },
   }
 }

@@ -115,15 +115,18 @@ router.get('/summary', async (req, res, next) => {
       WHERE DATE(milked_at) = CURRENT_DATE - 1
     `)
 
-    const today = parseFloat(todayResult.rows[0].today_total || 0)
-    const yesterday = parseFloat(yesterdayResult.rows[0].yesterday_total || 0)
+    // null 참조 방어: rows가 비어있을 수 있음
+    const todayRow = todayResult.rows.length > 0 ? todayResult.rows[0] : { today_total: 0, today_factory: 0, today_heads: 0 }
+    const yesterdayRow = yesterdayResult.rows.length > 0 ? yesterdayResult.rows[0] : { yesterday_total: 0 }
+    const today = parseFloat(todayRow.today_total || 0)
+    const yesterday = parseFloat(yesterdayRow.yesterday_total || 0)
     const changeRate = yesterday > 0
       ? ((today - yesterday) / yesterday * 100).toFixed(1)
       : null
 
     res.json(apiResponse({
-      monthly: result.rows[0],
-      today: { ...todayResult.rows[0], change_rate: changeRate },
+      monthly: result.rows.length > 0 ? result.rows[0] : {},
+      today: { ...todayRow, change_rate: changeRate },
     }))
   } catch (err) {
     next(err)
@@ -265,8 +268,8 @@ router.get('/dairy-price', async (req, res, next) => {
       query(`SELECT value FROM settings WHERE key = 'dairy_unit_price'`),
       query(`SELECT value FROM settings WHERE key = 'd2o_unit_price'`),
     ])
-    const dairyPrice = dairyRes.rows.length > 0 ? parseInt(dairyRes.rows[0].value) : 1130
-    const d2oPrice = d2oRes.rows.length > 0 ? parseInt(d2oRes.rows[0].value) : 1200
+    const dairyPrice = dairyRes.rows.length > 0 ? parseInt(dairyRes.rows[0].value, 10) : 1130
+    const d2oPrice = d2oRes.rows.length > 0 ? parseInt(d2oRes.rows[0].value, 10) : 1200
     res.json(apiResponse({ dairy_price: dairyPrice, d2o_price: d2oPrice }))
   } catch (err) {
     res.json(apiResponse({ dairy_price: 1130, d2o_price: 1200 }))

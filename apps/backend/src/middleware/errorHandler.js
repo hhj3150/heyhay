@@ -22,7 +22,7 @@ const errorHandler = (err, req, res, _next) => {
     : err.message
 
   if (status >= 500) {
-    console.error(`[ERROR] ${req.method} ${req.originalUrl}:`, err)
+    console.error(`[ERROR] ${req.method} ${req.originalUrl}:`, err.stack || err)
   }
 
   res.status(status).json(apiError(

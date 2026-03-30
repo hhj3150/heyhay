@@ -123,14 +123,15 @@ router.get('/cost', async (req, res, next) => {
 
     const row = result.rows[0]
     const totalCost = parseFloat(row.total_feed_cost || 0)
-    const totalHeadDays = parseInt(row.total_head_days || 0)
+    const totalHeadDays = parseInt(row.total_head_days || 0, 10)
 
     res.json(apiResponse({
       total_feed_cost_30d: totalCost,
+      // Division by Zero 방어: totalHeadDays가 0이면 null 반환
       avg_daily_cost_per_head: totalHeadDays > 0
         ? Math.round(totalCost / totalHeadDays)
         : null,
-      days_counted: parseInt(row.days || 0),
+      days_counted: parseInt(row.days || 0, 10),
     }))
   } catch (err) {
     next(err)

@@ -80,7 +80,11 @@ function transformOpsData(raw) {
   // 배송 데이터 변환 — 구독/주문/B2B 체크리스트를 단일 리스트로 병합
   const mapChecklist = (rows, orderType) =>
     (rows || []).map((r) => {
-      const items = typeof r.items === 'string' ? JSON.parse(r.items) : r.items
+      // JSON.parse 안전 처리
+      let items = []
+      try {
+        items = typeof r.items === 'string' ? JSON.parse(r.items) : (r.items || [])
+      } catch { items = [] }
       return {
         orderId: r.id,
         orderType,

@@ -104,16 +104,21 @@ router.get('/stats', async (req, res, next) => {
       ) sub
     `)
 
-    const cr = conceptionRate.rows[0]
-    const total = parseInt(cr.total_inseminated || 0)
-    const confirmed = parseInt(cr.total_confirmed || 0)
+    // null 참조 방어: rows가 비어있을 수 있음
+    const cr = conceptionRate.rows.length > 0
+      ? conceptionRate.rows[0]
+      : { total_inseminated: 0, total_confirmed: 0 }
+    const total = parseInt(cr.total_inseminated || 0, 10)
+    const confirmed = parseInt(cr.total_confirmed || 0, 10)
+
+    const openDaysRow = openDays.rows.length > 0 ? openDays.rows[0] : { avg_open_days: null }
 
     res.json(apiResponse({
       conception_rate: total > 0 ? ((confirmed / total) * 100).toFixed(1) : null,
       total_inseminated: total,
       total_confirmed: confirmed,
-      avg_open_days: openDays.rows[0].avg_open_days
-        ? parseFloat(openDays.rows[0].avg_open_days).toFixed(0)
+      avg_open_days: openDaysRow.avg_open_days
+        ? parseFloat(openDaysRow.avg_open_days).toFixed(0)
         : null,
     }))
   } catch (err) {
@@ -188,7 +193,7 @@ router.get('/', async (req, res, next) => {
       params.push(event_type)
     }
 
-    const offset = (parseInt(page) - 1) * parseInt(limit)
+    const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10)
     const where = conditions.join(' AND ')
 
     const result = await query(`
@@ -198,7 +203,7 @@ router.get('/', async (req, res, next) => {
       WHERE ${where}
       ORDER BY br.event_date DESC
       LIMIT $${idx++} OFFSET $${idx++}
-    `, [...params, parseInt(limit), offset])
+    `, [...params, parseInt(limit, 10), offset])
 
     res.json(apiResponse(result.rows))
   } catch (err) {

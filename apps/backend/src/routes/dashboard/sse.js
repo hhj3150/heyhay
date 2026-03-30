@@ -8,6 +8,7 @@
 const express = require('express')
 const jwt = require('jsonwebtoken')
 const env = require('../../config/env')
+const { apiError } = require('../../lib/shared')
 
 const router = express.Router()
 
@@ -42,12 +43,12 @@ router.get('/', (req, res) => {
   // EventSource는 헤더 설정 불가 → ?token=<jwt> 방식으로 인증
   const token = req.query.token
   if (!token) {
-    return res.status(401).json({ success: false, error: { code: 'AUTH_REQUIRED', message: '토큰이 필요합니다' } })
+    return res.status(401).json(apiError('AUTH_REQUIRED', '토큰이 필요합니다'))
   }
   try {
     jwt.verify(token, env.jwt.secret)
   } catch {
-    return res.status(401).json({ success: false, error: { code: 'TOKEN_INVALID', message: '유효하지 않은 토큰입니다' } })
+    return res.status(401).json(apiError('TOKEN_INVALID', '유효하지 않은 토큰입니다'))
   }
 
   // SSE 헤더 설정

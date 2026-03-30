@@ -86,7 +86,7 @@ export default function OrderBoard() {
   const lookupPrice = (skuCode, channel) => {
     if (channel === 'SAMPLE') return 0
     const priceChannel = getSkuPriceChannel(channel)
-    const found = skuPrices.find(
+    const found = (skuPrices || []).find(
       (p) => p.sku_code === skuCode && p.channel === priceChannel,
     )
     return found ? parseInt(found.unit_price) : 0

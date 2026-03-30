@@ -115,8 +115,8 @@ export default function DeliveryChecklist() {
   const filtered = items.filter((item) => {
     if (!search) return true
     const q = search.toLowerCase()
-    return item.customer_name?.toLowerCase().includes(q) ||
-           item.customer_phone?.includes(q)
+    return (item.customer_name || '').toLowerCase().includes(q) ||
+           (item.customer_phone || '').includes(q)
   })
 
   const completionPct = stats?.completion_pct || 0
@@ -222,7 +222,11 @@ export default function DeliveryChecklist() {
       {/* 체크리스트 항목 */}
       <div className="space-y-2 scroll-momentum">
         {filtered.map((item) => {
-          const items_ = typeof item.items === 'string' ? JSON.parse(item.items) : item.items
+          // JSON.parse 안전 처리
+          let items_ = []
+          try {
+            items_ = typeof item.items === 'string' ? JSON.parse(item.items) : (item.items || [])
+          } catch { items_ = [] }
           const badge = SOURCE_BADGE[item.source_type] || SOURCE_BADGE.ORDER
           const allDone = item.is_shipped
           const hasIssue = item.has_issue

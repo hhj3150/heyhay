@@ -95,7 +95,11 @@ export default function DeliverySchedule() {
           if (diff % freq === 0 || formatDate(wd) === formatDate(nextDate)) {
             const key = formatDate(wd)
             if (subDeliveries[key]) {
-              const items = typeof s.items === 'string' ? JSON.parse(s.items) : s.items
+              // JSON.parse 안전 처리
+              let items = []
+              try {
+                items = typeof s.items === 'string' ? JSON.parse(s.items) : (s.items || [])
+              } catch { items = [] }
               subDeliveries[key].push({
                 ...s,
                 type: 'subscription',

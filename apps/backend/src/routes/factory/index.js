@@ -3,6 +3,7 @@
  * /api/v1/factory 하위 모든 라우트 통합
  */
 const express = require('express')
+const { apiResponse, apiError } = require('../../lib/shared')
 
 const router = express.Router()
 
@@ -17,7 +18,7 @@ router.get('/production-plan', async (req, res, next) => {
   try {
     const { generateProductionPlan } = require('../../services/milkDemand')
     const plan = await generateProductionPlan()
-    res.json({ success: true, data: plan, meta: {} })
+    res.json(apiResponse(plan))
   } catch (err) {
     next(err)
   }
@@ -28,24 +29,16 @@ router.get('/plan/demand', async (req, res, next) => {
   try {
     const { generateProductionPlan } = require('../../services/milkDemand')
     const plan = await generateProductionPlan()
-    res.json({
-      success: true,
-      data: {
-        total_milk_needed_l: plan.raw_milk.daily_need_l,
-        daily_to_factory_l: plan.milk_allocation.daily_to_factory_l,
-        daily_to_dairy_l: plan.milk_allocation.daily_to_dairy_l,
-        breakdown: plan.raw_milk.breakdown,
-        demand_by_sku: plan.demand_by_sku,
-      },
-      meta: {},
-    })
+    res.json(apiResponse({
+      total_milk_needed_l: plan.raw_milk.daily_need_l,
+      daily_to_factory_l: plan.milk_allocation.daily_to_factory_l,
+      daily_to_dairy_l: plan.milk_allocation.daily_to_dairy_l,
+      breakdown: plan.raw_milk.breakdown,
+      demand_by_sku: plan.demand_by_sku,
+    }))
   } catch (err) {
     // 데이터 없어도 기본값 반환
-    res.json({
-      success: true,
-      data: { total_milk_needed_l: 0, daily_to_factory_l: 0, daily_to_dairy_l: 550, breakdown: [] },
-      meta: {},
-    })
+    res.json(apiResponse({ total_milk_needed_l: 0, daily_to_factory_l: 0, daily_to_dairy_l: 550, breakdown: [] }))
   }
 })
 

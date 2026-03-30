@@ -60,8 +60,17 @@ router.get('/kpi', async (req, res, next) => {
       `).catch((e) => { console.error('[KPI] 알림 조회 실패:', e.message); return { rows: [{ unread: 0 }] } }),
     ])
 
-    const todayMilk = parseFloat(milk.rows[0].today_milk)
-    const yesterdayMilk = parseFloat(milk.rows[0].yesterday_milk)
+    // null 참조 방어: rows가 비어있을 수 있음
+    const milkRow = milk.rows.length > 0 ? milk.rows[0] : { today_milk: 0, yesterday_milk: 0, today_heads: 0 }
+    const factoryRow = factory.rows.length > 0 ? factory.rows[0] : { today_batches: 0 }
+    const rawMilkRow = rawMilk.rows.length > 0 ? rawMilk.rows[0] : { today_raw_milk: 0 }
+    const ordersRow = orders.rows.length > 0 ? orders.rows[0] : { today_orders: 0, today_order_revenue: 0, month_revenue: 0 }
+    const subsRow = subs.rows.length > 0 ? subs.rows[0] : { active_subs: 0 }
+    const cafeRow = cafe.rows.length > 0 ? cafe.rows[0] : { today_cafe: 0, month_cafe: 0 }
+    const alertsRow = alerts.rows.length > 0 ? alerts.rows[0] : { unread: 0 }
+
+    const todayMilk = parseFloat(milkRow.today_milk)
+    const yesterdayMilk = parseFloat(milkRow.yesterday_milk)
     const milkChange = yesterdayMilk > 0
       ? ((todayMilk - yesterdayMilk) / yesterdayMilk * 100).toFixed(1)
       : null
@@ -71,24 +80,24 @@ router.get('/kpi', async (req, res, next) => {
         today_milk_l: todayMilk,
         yesterday_milk_l: yesterdayMilk,
         milk_change_pct: milkChange,
-        milking_heads: parseInt(milk.rows[0].today_heads),
+        milking_heads: parseInt(milkRow.today_heads, 10),
       },
       factory: {
-        today_batches: parseInt(factory.rows[0].today_batches),
-        today_raw_milk_l: parseFloat(rawMilk.rows[0].today_raw_milk),
+        today_batches: parseInt(factoryRow.today_batches, 10),
+        today_raw_milk_l: parseFloat(rawMilkRow.today_raw_milk),
       },
       market: {
-        today_orders: parseInt(orders.rows[0].today_orders),
-        today_revenue: parseInt(orders.rows[0].today_order_revenue),
-        month_revenue: parseInt(orders.rows[0].month_revenue),
-        active_subscribers: parseInt(subs.rows[0].active_subs),
+        today_orders: parseInt(ordersRow.today_orders, 10),
+        today_revenue: parseInt(ordersRow.today_order_revenue, 10),
+        month_revenue: parseInt(ordersRow.month_revenue, 10),
+        active_subscribers: parseInt(subsRow.active_subs, 10),
       },
       cafe: {
-        today_revenue: parseInt(cafe.rows[0].today_cafe),
-        month_revenue: parseInt(cafe.rows[0].month_cafe),
+        today_revenue: parseInt(cafeRow.today_cafe, 10),
+        month_revenue: parseInt(cafeRow.month_cafe, 10),
       },
       alerts: {
-        unread: parseInt(alerts.rows[0].unread),
+        unread: parseInt(alertsRow.unread, 10),
       },
     }))
   } catch (err) {

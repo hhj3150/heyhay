@@ -39,10 +39,12 @@ function formatDateKR(dateStr) {
   })
 }
 
-/** items JSON 파싱 */
+/** items JSON 파싱 (안전 처리) */
 function parseItems(items) {
   if (!items) return []
-  return typeof items === 'string' ? JSON.parse(items) : items
+  try {
+    return typeof items === 'string' ? JSON.parse(items) : (items || [])
+  } catch { return [] }
 }
 
 /** 제품 목록을 한 줄 텍스트로 */

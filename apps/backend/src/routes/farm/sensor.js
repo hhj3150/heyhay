@@ -93,11 +93,16 @@ router.get('/status', async (req, res, next) => {
       SELECT COUNT(DISTINCT animal_id) AS count FROM sensor_readings
     `)
 
+    // null 참조 방어: rows가 비어있을 수 있음
+    const lastSyncRow = latestReading.rows.length > 0 ? latestReading.rows[0] : { last_sync: null }
+    const totalRow = totalReadings.rows.length > 0 ? totalReadings.rows[0] : { count: 0 }
+    const animalRow = animalCount.rows.length > 0 ? animalCount.rows[0] : { count: 0 }
+
     res.json(apiResponse({
       connected: hasKey,
-      last_sync: latestReading.rows[0].last_sync,
-      total_readings: parseInt(totalReadings.rows[0].count),
-      monitored_animals: parseInt(animalCount.rows[0].count),
+      last_sync: lastSyncRow.last_sync,
+      total_readings: parseInt(totalRow.count, 10),
+      monitored_animals: parseInt(animalRow.count, 10),
     }))
   } catch (err) {
     next(err)

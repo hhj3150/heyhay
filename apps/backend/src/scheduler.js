@@ -3,7 +3,7 @@
  * 서버 시작 시 자동 등록, ENABLE_SCHEDULER=true 일 때만 실행
  *
  * 스케줄:
- * - 매 2시간 (06~22시): 스마트스토어 주문 동기화
+ * - 매 2시간 (08~22시, 06시 제외): 스마트스토어 주문 동기화
  * - 매일 05:30: 배송 체크리스트 자동 생성
  * - 매일 06:00: 구독 결제 배치
  */
@@ -13,6 +13,16 @@ const { broadcastAlert } = require('./routes/dashboard/sse')
 
 // 스케줄러 활성화 여부
 const isEnabled = () => process.env.ENABLE_SCHEDULER === 'true'
+
+/** KST 기준 오늘 날짜 (YYYY-MM-DD) — 중복 KST 계산 통합 */
+const getKstToday = () => {
+  const now = new Date()
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000)
+  return kst.toISOString().split('T')[0]
+}
+
+// 구독결제 중복 실행 방지 플래그
+let isPaymentRunning = false
 
 // 작업 실패 시 알림 생성 + SSE 실시간 push
 const createAlert = async (title, message, priority = 'P2') => {
@@ -86,9 +96,7 @@ const syncNaverOrders = async () => {
         }
 
         // 주문번호 생성
-        const now = new Date()
-        const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000)
-        const dateStr = kst.toISOString().split('T')[0].replace(/-/g, '')
+        const dateStr = getKstToday().replace(/-/g, '')
         const seqRes = await query(
           'SELECT COUNT(*) + 1 AS seq FROM orders WHERE order_number LIKE $1',
           [`HH-${dateStr}-%`],
@@ -158,16 +166,15 @@ const syncNaverOrders = async () => {
 const generateChecklist = async () => {
   const tag = '[스케줄러:체크리스트]'
   try {
-    const now = new Date()
-    const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000)
-    const targetDate = kst.toISOString().split('T')[0]
+    const targetDate = getKstToday()
+    const kst = new Date(new Date().getTime() + 9 * 60 * 60 * 1000)
 
     // 이미 생성된 건 확인
     const existing = await query(
       'SELECT COUNT(*) FROM delivery_checklist WHERE delivery_date = $1',
       [targetDate],
     )
-    if (parseInt(existing.rows[0].count) > 0) {
+    if (parseInt(existing.rows[0].count, 10) > 0) {
       console.log(`${tag} ${targetDate} 이미 생성됨 (${existing.rows[0].count}건)`)
       return
     }
@@ -275,6 +282,12 @@ const generateChecklist = async () => {
  */
 const runSubscriptionPayment = async () => {
   const tag = '[스케줄러:구독결제]'
+  // 중복 실행 방지
+  if (isPaymentRunning) {
+    console.log(`${tag} 이미 실행 중 — 스킵`)
+    return
+  }
+  isPaymentRunning = true
   try {
     const { runPaymentBatch } = require('./services/subscriptionPayment')
     const result = await runPaymentBatch()
@@ -292,6 +305,8 @@ const runSubscriptionPayment = async () => {
   } catch (err) {
     console.error(`${tag} 실패:`, err.message)
     await createAlert('구독 결제 배치 실패', err.message, 'P1')
+  } finally {
+    isPaymentRunning = false
   }
 }
 
@@ -306,8 +321,8 @@ const init = () => {
 
   console.log('[스케줄러] 자동 스케줄러 시작')
 
-  // 매 2시간 (06, 08, 10, 12, 14, 16, 18, 20, 22시) — 스마트스토어 주문 동기화
-  cron.schedule('0 6,8,10,12,14,16,18,20,22 * * *', () => {
+  // 매 2시간 (08, 10, 12, 14, 16, 18, 20, 22시) — 스마트스토어 주문 동기화 (06시 제외: 구독결제와 충돌 방지)
+  cron.schedule('0 8,10,12,14,16,18,20,22 * * *', () => {
     console.log('[스케줄러] 스마트스토어 주문 동기화 시작')
     syncNaverOrders()
   }, { timezone: 'Asia/Seoul' })
@@ -324,7 +339,7 @@ const init = () => {
     runSubscriptionPayment()
   }, { timezone: 'Asia/Seoul' })
 
-  console.log('[스케줄러] 등록 완료: 네이버동기화(2h), 체크리스트(05:30), 구독결제(06:00)')
+  console.log('[스케줄러] 등록 완료: 네이버동기화(2h, 06시 제외), 체크리스트(05:30), 구독결제(06:00)')
 }
 
 module.exports = { init, syncNaverOrders, generateChecklist, runSubscriptionPayment }
