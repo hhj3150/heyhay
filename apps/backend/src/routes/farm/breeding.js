@@ -46,7 +46,7 @@ router.get('/upcoming', async (req, res, next) => {
       FROM breeding_records br
       JOIN animals a ON br.animal_id = a.id
       WHERE br.expected_calving IS NOT NULL
-        AND br.expected_calving BETWEEN CURRENT_DATE AND CURRENT_DATE + $1
+        AND br.expected_calving BETWEEN CURRENT_DATE AND CURRENT_DATE + ($1)::integer
         AND br.event_type IN ('AI', 'ET', 'IVF', 'PREG_CHECK')
         AND br.deleted_at IS NULL
         AND NOT EXISTS (

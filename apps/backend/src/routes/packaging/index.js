@@ -457,23 +457,29 @@ router.get('/demand-forecast', async (req, res, next) => {
   try {
     // 1) 이번 주 구독 배송 + 미처리 주문에서 SKU별 수량 합산
     const pendingOrders = await query(`
-      SELECT oi.sku_code, SUM(oi.quantity) AS total_qty
+      SELECT s.code AS sku_code, SUM(oi.quantity) AS total_qty
       FROM order_items oi
       JOIN orders o ON oi.order_id = o.id
+      JOIN skus s ON oi.sku_id = s.id
       WHERE o.status IN ('PENDING', 'PAID', 'PROCESSING', 'PACKED')
         AND o.deleted_at IS NULL
-      GROUP BY oi.sku_code
+      GROUP BY s.code
     `)
 
-    // 구독 배송 (이번 주)
-    const subscriptionOrders = await query(`
-      SELECT si.sku_code, SUM(si.quantity) AS total_qty
-      FROM subscription_items si
-      JOIN subscriptions s ON si.subscription_id = s.id
-      WHERE s.status = 'ACTIVE'
-        AND s.deleted_at IS NULL
-      GROUP BY si.sku_code
-    `)
+    // 구독 배송 (이번 주) — 테이블 미존재 시 빈 결과
+    let subscriptionOrders = { rows: [] }
+    try {
+      subscriptionOrders = await query(`
+        SELECT si.sku_code, SUM(si.quantity) AS total_qty
+        FROM subscription_items si
+        JOIN subscriptions s ON si.subscription_id = s.id
+        WHERE s.status = 'ACTIVE'
+          AND s.deleted_at IS NULL
+        GROUP BY si.sku_code
+      `)
+    } catch (e) {
+      // subscription_items 테이블이 없을 수 있음 (42P01)
+    }
 
     // SKU별 합산
     /** @type {Record<string, number>} */
