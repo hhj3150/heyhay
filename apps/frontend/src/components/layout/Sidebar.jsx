@@ -27,6 +27,7 @@ const NAV_ITEMS = [
     { label: '오늘 착유량', icon: Milk, path: '/farm/milk' },
     { label: '생산 계획', icon: ClipboardList, path: '/factory/plan' },
     { label: 'CCP 기록', icon: Thermometer, path: '/factory/ccp' },
+    { label: '재고 현황', icon: Package, path: '/factory/inventory' },
     { label: '공정 현황', icon: Gauge, path: '/factory/dashboard' },
     { label: '자재 관리', icon: Boxes, path: '/factory/packaging' },
   ]},
