@@ -7,5 +7,6 @@ const express = require('express')
 const router = express.Router()
 
 router.use('/subscribe', require('./subscribe'))
+router.use('/schema-check', require('./schema-check'))
 
 module.exports = router
