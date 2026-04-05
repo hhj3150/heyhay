@@ -68,6 +68,7 @@ export default defineConfig({
     },
   },
   server: {
+    host: true, // 외부 기기(핸드폰 등) LAN 접속 허용
     port: 5173,
     proxy: {
       '/api': {
