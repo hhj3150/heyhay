@@ -10,5 +10,6 @@ router.use('/orders', require('./orders'))
 router.use('/b2b', require('./b2bPartners'))
 router.use('/checklist', require('./checklist'))
 router.use('/naver', require('./naverSync'))
+router.use('/sms', require('./sms'))
 
 module.exports = router

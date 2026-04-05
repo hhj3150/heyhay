@@ -132,6 +132,16 @@ export const apiPut = (endpoint, body) =>
 export const apiDelete = (endpoint) =>
   api(endpoint, { method: 'DELETE' })
 
+/** 공개 POST (인증 헤더 없음, 공개 랜딩 페이지 전용) */
+export const publicPost = async (endpoint, body) => {
+  const res = await fetch(`${BASE_URL}${endpoint}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  return res.json()
+}
+
 export { setTokens, clearTokens, getAccessToken, refreshAccessToken }
 
 /** 비활성 30분 시 자동 로그아웃 */

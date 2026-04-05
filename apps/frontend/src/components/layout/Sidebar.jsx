@@ -9,7 +9,7 @@ import {
   LogOut, ChevronLeft, ChevronRight, Menu, X,
   Package, CreditCard, BarChart3, Users, Calendar,
   DollarSign, ClipboardList, Gauge, Building2, ClipboardCheck,
-  Settings, Cog, Boxes, Thermometer, ShoppingBag,
+  Settings, Cog, Boxes, Thermometer, ShoppingBag, QrCode,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import useAuthStore from '@/stores/authStore'
@@ -39,6 +39,7 @@ const NAV_ITEMS = [
   { id: 'customers', label: '고객·거래처', icon: Users, path: '/market/customers', accent: 'violet', children: [
     { label: '고객 관리', icon: Users, path: '/market/customers' },
     { label: '구독 관리', icon: CreditCard, path: '/market/subscriptions' },
+    { label: '사전신청자', icon: ClipboardList, path: '/market/signups' },
     { label: 'B2B 거래처', icon: Building2, path: '/market/b2b' },
   ]},
   { id: 'analytics', label: '경영 분석', icon: BarChart3, path: '/dashboard/overview', accent: 'amber', children: [
@@ -50,6 +51,7 @@ const NAV_ITEMS = [
     { label: '제품 단가', icon: DollarSign, path: '/settings/prices' },
     { label: '시스템 설정', icon: Cog, path: '/settings/system' },
     { label: '네이버 연동', icon: ShoppingBag, path: '/settings/naver' },
+    { label: 'QR 코드', icon: QrCode, path: '/settings/qr' },
   ]},
 ]
 

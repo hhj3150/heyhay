@@ -85,6 +85,19 @@ const apiError = (code, message) => ({
   error: { code, message },
 })
 
+/** 공개 랜딩 페이지 노출 상품 (HACCP 인증 전 사전 신청용 3종) */
+const PUBLIC_SKUS = Object.freeze([
+  { code: 'A2-750', name: '우유 750ml', unit_price: 12000 },
+  { code: 'A2-180', name: '우유 180ml', unit_price: 3200 },
+  { code: 'YG-500', name: '플레인요거트 500ml', unit_price: 10000 },
+])
+
+/** 배송비 정책 */
+const SHIPPING = Object.freeze({
+  free_threshold: 35000,
+  base_fee: 3000,
+})
+
 module.exports = {
   ROLES,
   ROLE_PERMISSIONS,
@@ -94,6 +107,8 @@ module.exports = {
   ORDER_STATUS,
   CHANNELS,
   COW_STATUS,
+  PUBLIC_SKUS,
+  SHIPPING,
   apiResponse,
   apiError,
 }

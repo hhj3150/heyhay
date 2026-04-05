@@ -15,6 +15,8 @@ const FactoryRoutes = lazy(() => import('@/pages/factory/FactoryRoutes'))
 const MarketRoutes = lazy(() => import('@/pages/market/MarketRoutes'))
 // 밀크카페는 팜랜드 자체 운영 — B2B 거래처로만 관리
 const SettingsRoutes = lazy(() => import('@/pages/settings/SettingsRoutes'))
+const SubscribeLanding = lazy(() => import('@/pages/public/SubscribeLanding'))
+const SubscribeSuccess = lazy(() => import('@/pages/public/SubscribeSuccess'))
 
 export default function App() {
   return (
@@ -23,6 +25,8 @@ export default function App() {
         <Suspense fallback={<LoadingScreen />}>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/subscribe" element={<ErrorBoundary><SubscribeLanding /></ErrorBoundary>} />
+            <Route path="/subscribe/success" element={<ErrorBoundary><SubscribeSuccess /></ErrorBoundary>} />
             <Route path="/" element={<AppLayout />}>
               <Route index element={<ErrorBoundary><TodayOpsPage /></ErrorBoundary>} />
               <Route path="dashboard/overview" element={<ErrorBoundary><DashboardPage /></ErrorBoundary>} />

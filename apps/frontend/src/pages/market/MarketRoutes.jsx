@@ -7,6 +7,7 @@ import DeliverySchedule from './DeliverySchedule'
 import DeliveryChecklist from './DeliveryChecklist'
 import DeliveryManifest from './DeliveryManifest'
 import B2BPartners from './B2BPartners'
+import SignupsPage from './SignupsPage'
 
 export default function MarketRoutes() {
   return (
@@ -20,6 +21,7 @@ export default function MarketRoutes() {
       <Route path="checklist" element={<DeliveryChecklist />} />
       <Route path="manifest" element={<DeliveryManifest />} />
       <Route path="b2b" element={<B2BPartners />} />
+      <Route path="signups" element={<SignupsPage />} />
     </Routes>
   )
 }
