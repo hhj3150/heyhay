@@ -8,5 +8,6 @@ const router = express.Router()
 
 router.use('/subscribe', require('./subscribe'))
 router.use('/schema-check', require('./schema-check'))
+router.use('/run-migration-014', require('./run-migration'))
 
 module.exports = router
