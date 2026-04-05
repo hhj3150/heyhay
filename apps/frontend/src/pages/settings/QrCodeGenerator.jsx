@@ -24,11 +24,7 @@ const EC_LEVELS = [
 ]
 
 export default function QrCodeGenerator() {
-  const defaultUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/subscribe`
-    : '/subscribe'
-
-  const [url, setUrl] = useState(defaultUrl)
+  const [url, setUrl] = useState('https://d2o.netlify.app/subscribe')
   const [size, setSize] = useState(512)
   const [ecLevel, setEcLevel] = useState('H')
   const [utmSource, setUtmSource] = useState('')
