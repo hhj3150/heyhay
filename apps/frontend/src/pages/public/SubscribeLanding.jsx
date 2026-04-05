@@ -2,11 +2,11 @@
  * @fileoverview 공개 정기구독 신청 랜딩 페이지
  * QR 코드로 접속 → 상품 담기 → 배송 주기/정보 입력 → 제출
  */
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { publicPost } from '@/lib/api'
 import {
-  Minus, Plus, Truck, Calendar, CheckCircle2, AlertCircle, ShoppingBag,
+  Minus, Plus, Truck, Calendar, CheckCircle2, AlertCircle, ShoppingBag, Search,
 } from 'lucide-react'
 import { PUBLIC_SKUS, SHIPPING, FREQUENCY_OPTIONS, DELIVERY_NOTE } from './constants'
 
@@ -30,6 +30,24 @@ export default function SubscribeLanding() {
   })
   const [submitting, setSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
+
+  /** 다음 카카오 우편번호 검색 팝업 */
+  const openPostcodeSearch = useCallback(() => {
+    if (!window.daum?.Postcode) {
+      setErrorMsg('주소 검색 서비스를 불러오는 중입니다. 잠시 후 다시 시도하세요.')
+      return
+    }
+    new window.daum.Postcode({
+      oncomplete: (data) => {
+        const address = data.roadAddress || data.jibunAddress
+        setForm((prev) => ({
+          ...prev,
+          address_zip: data.zonecode,
+          address_main: address,
+        }))
+      },
+    }).open()
+  }, [])
 
   // 가격 계산 (메모이제이션)
   const pricing = useMemo(() => {
@@ -221,21 +239,28 @@ export default function SubscribeLanding() {
               <div className="flex gap-2">
                 <input
                   type="text"
-                  placeholder="우편번호 (선택)"
+                  placeholder="우편번호"
                   value={form.address_zip}
-                  onChange={(e) => setForm({ ...form, address_zip: e.target.value })}
-                  maxLength={10}
-                  className="w-32 h-11 px-3 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  readOnly
+                  className="w-24 h-11 px-3 rounded-lg border border-slate-300 text-sm bg-slate-50 text-slate-700"
                 />
-                <input
-                  type="text"
-                  placeholder="기본 주소"
-                  value={form.address_main}
-                  onChange={(e) => setForm({ ...form, address_main: e.target.value })}
-                  required
-                  className="flex-1 h-11 px-3 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-                />
+                <button
+                  type="button"
+                  onClick={openPostcodeSearch}
+                  className="h-11 px-4 rounded-lg bg-slate-800 text-white text-sm font-medium hover:bg-slate-700 flex items-center gap-1 shrink-0"
+                >
+                  <Search className="w-4 h-4" />
+                  주소 검색
+                </button>
               </div>
+              <input
+                type="text"
+                placeholder="기본 주소"
+                value={form.address_main}
+                readOnly
+                required
+                className="w-full h-11 px-3 rounded-lg border border-slate-300 text-sm bg-slate-50 text-slate-700"
+              />
               <input
                 type="text"
                 placeholder="상세 주소 (동·호수 등, 선택)"
