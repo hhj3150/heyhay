@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import FactoryDashboard from './FactoryDashboard'
 import ProductionPlan from './ProductionPlan'
 import InventoryPage from './InventoryPage'
+import CostAnalysisPage from './CostAnalysisPage'
 import PackagingPage from './PackagingPage'
 import PackagingOrders from './PackagingOrders'
 import CCPRecordPage from './CCPRecordPage'
@@ -13,6 +14,7 @@ export default function FactoryRoutes() {
       <Route path="dashboard" element={<FactoryDashboard />} />
       <Route path="plan" element={<ProductionPlan />} />
       <Route path="inventory" element={<InventoryPage />} />
+      <Route path="cost" element={<CostAnalysisPage />} />
       <Route path="ccp" element={<CCPRecordPage />} />
       <Route path="packaging" element={<PackagingPage />} />
       <Route path="packaging/orders" element={<PackagingOrders />} />

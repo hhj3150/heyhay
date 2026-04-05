@@ -9,6 +9,7 @@ const router = express.Router()
 
 router.use('/raw-milk', require('./rawMilk'))
 router.use('/process', require('./process'))
+router.use('/cost-analysis', require('./costAnalysis'))
 
 // production.js 에서 SKU, 배치, 재고를 모두 처리
 router.use('/', require('./production'))

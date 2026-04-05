@@ -44,6 +44,7 @@ const NAV_ITEMS = [
   { id: 'analytics', label: '경영 분석', icon: BarChart3, path: '/dashboard/overview', accent: 'amber', children: [
     { label: '경영 대시보드', icon: BarChart3, path: '/dashboard/overview' },
     { label: '현황 요약', icon: BarChart3, path: '/market/overview' },
+    { label: '원가 분석', icon: DollarSign, path: '/factory/cost' },
   ]},
   { id: 'settings', label: '설정', icon: Settings, path: '/settings', accent: 'slate', children: [
     { label: '제품 단가', icon: DollarSign, path: '/settings/prices' },
