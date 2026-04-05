@@ -9,7 +9,7 @@ import {
   LogOut, ChevronLeft, ChevronRight, Menu, X,
   Package, CreditCard, BarChart3, Users, Calendar,
   DollarSign, ClipboardList, Gauge, Building2, ClipboardCheck,
-  Settings, Cog, Boxes, Thermometer,
+  Settings, Cog, Boxes, Thermometer, ShoppingBag,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import useAuthStore from '@/stores/authStore'
@@ -48,6 +48,7 @@ const NAV_ITEMS = [
   { id: 'settings', label: '설정', icon: Settings, path: '/settings', accent: 'slate', children: [
     { label: '제품 단가', icon: DollarSign, path: '/settings/prices' },
     { label: '시스템 설정', icon: Cog, path: '/settings/system' },
+    { label: '네이버 연동', icon: ShoppingBag, path: '/settings/naver' },
   ]},
 ]
 

@@ -4,6 +4,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import PriceSettings from './PriceSettings'
 import SystemSettings from './SystemSettings'
+import NaverIntegration from './NaverIntegration'
 
 export default function SettingsRoutes() {
   return (
@@ -11,6 +12,7 @@ export default function SettingsRoutes() {
       <Route index element={<Navigate to="prices" replace />} />
       <Route path="prices" element={<PriceSettings />} />
       <Route path="system" element={<SystemSettings />} />
+      <Route path="naver" element={<NaverIntegration />} />
     </Routes>
   )
 }
