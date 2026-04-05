@@ -8,50 +8,49 @@ const { apiResponse } = require('../../lib/shared')
 
 const router = express.Router()
 
-router.get('/', async (req, res, next) => {
+/** 안전한 쿼리 실행 (에러 시 에러 메시지 반환) */
+const safeQuery = async (sql) => {
   try {
-    // subscriptions 테이블의 컬럼 목록
-    const subCols = await query(`
-      SELECT column_name FROM information_schema.columns
-      WHERE table_name = 'subscriptions'
-      ORDER BY column_name
-    `)
-
-    // 014 마이그레이션 적용 여부
-    const migApplied = await query(`
-      SELECT filename, applied_at FROM _migrations
-      WHERE filename LIKE '014%'
-    `)
-
-    // status check 제약조건
-    const statusCheck = await query(`
-      SELECT pg_get_constraintdef(oid) AS def
-      FROM pg_constraint
-      WHERE conname = 'subscriptions_status_check'
-    `)
-
-    // sms_logs 테이블 존재 여부
-    const smsTable = await query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables
-        WHERE table_name = 'sms_logs'
-      ) AS exists
-    `)
-
-    const columns = subCols.rows.map((r) => r.column_name)
-    const expectedNewCols = ['shipping_fee', 'delivery_note', 'signup_source', 'signup_ip', 'consent_sms', 'consent_privacy']
-    const missing = expectedNewCols.filter((c) => !columns.includes(c))
-
-    res.json(apiResponse({
-      subscriptions_columns: columns,
-      missing_new_columns: missing,
-      migration_014_applied: migApplied.rows,
-      status_check_def: statusCheck.rows[0]?.def,
-      sms_logs_exists: smsTable.rows[0]?.exists,
-    }))
+    const r = await query(sql)
+    return { ok: true, data: r.rows }
   } catch (err) {
-    next(err)
+    return { ok: false, error: err.message, code: err.code }
   }
+}
+
+router.get('/', async (req, res) => {
+  const subCols = await safeQuery(`
+    SELECT column_name FROM information_schema.columns
+    WHERE table_name = 'subscriptions' ORDER BY column_name
+  `)
+
+  const migrationsTable = await safeQuery(`
+    SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = '_migrations') AS exists
+  `)
+
+  const migApplied = await safeQuery(`SELECT filename, applied_at FROM _migrations ORDER BY filename`)
+
+  const smsTable = await safeQuery(`
+    SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'sms_logs') AS exists
+  `)
+
+  const statusCheck = await safeQuery(`
+    SELECT pg_get_constraintdef(oid) AS def
+    FROM pg_constraint WHERE conname = 'subscriptions_status_check'
+  `)
+
+  const columns = subCols.ok ? subCols.data.map((r) => r.column_name) : []
+  const expectedNewCols = ['shipping_fee', 'delivery_note', 'signup_source', 'signup_ip', 'consent_sms', 'consent_privacy']
+  const missing = expectedNewCols.filter((c) => !columns.includes(c))
+
+  res.json(apiResponse({
+    subscriptions_columns: columns,
+    missing_new_columns: missing,
+    migrations_table: migrationsTable,
+    all_migrations: migApplied,
+    sms_logs_table: smsTable,
+    status_check: statusCheck,
+  }))
 })
 
 module.exports = router
