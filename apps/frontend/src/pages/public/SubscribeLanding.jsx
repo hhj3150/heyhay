@@ -97,8 +97,7 @@ export default function SubscribeLanding() {
     })
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  const handleSubmit = async () => {
     setErrorMsg('')
 
     if (pricing.items.length === 0) {
@@ -248,8 +247,8 @@ export default function SubscribeLanding() {
           </p>
         </section>
 
-        {/* 고객 정보 폼 */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* 고객 정보 */}
+        <div className="space-y-4">
           <section>
             <h2 className="text-sm font-bold text-slate-900 mb-3">배송 정보</h2>
             <div className="space-y-3">
@@ -258,7 +257,6 @@ export default function SubscribeLanding() {
                 placeholder="이름"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                required
                 maxLength={50}
                 className="w-full h-11 px-3 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
               />
@@ -267,7 +265,6 @@ export default function SubscribeLanding() {
                 placeholder="휴대전화 (010-0000-0000)"
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })}
-                required
                 className="w-full h-11 px-3 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
               />
               <div className="flex gap-2">
@@ -292,7 +289,6 @@ export default function SubscribeLanding() {
                 placeholder="기본 주소"
                 value={form.address_main}
                 readOnly
-                required
                 className="w-full h-11 px-3 rounded-lg border border-slate-300 text-sm bg-slate-50 text-slate-700"
               />
               <input
@@ -338,7 +334,7 @@ export default function SubscribeLanding() {
               <span>{errorMsg}</span>
             </div>
           )}
-        </form>
+        </div>
       </div>
 
       {/* Sticky Bottom Summary */}
