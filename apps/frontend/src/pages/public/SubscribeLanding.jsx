@@ -83,8 +83,20 @@ export default function SubscribeLanding() {
       setErrorMsg('상품을 1개 이상 담아주세요')
       return
     }
+    if (!form.name.trim()) {
+      setErrorMsg('이름을 입력해주세요')
+      return
+    }
+    if (!form.phone || form.phone.replace(/-/g, '').length < 10) {
+      setErrorMsg('휴대전화 번호를 정확히 입력해주세요')
+      return
+    }
+    if (!form.address_main.trim()) {
+      setErrorMsg('주소 검색 버튼을 눌러 주소를 입력해주세요')
+      return
+    }
     if (!form.consent_privacy) {
-      setErrorMsg('개인정보 수집·이용 동의는 필수입니다')
+      setErrorMsg('개인정보 수집·이용 동의에 체크해주세요')
       return
     }
 
@@ -346,7 +358,7 @@ export default function SubscribeLanding() {
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={submitting || pricing.items.length === 0}
+              disabled={submitting || pricing.items.length === 0 || !form.name.trim() || !form.phone || !form.address_main.trim() || !form.consent_privacy}
               className="px-6 py-3 rounded-xl bg-amber-500 text-white font-semibold text-sm hover:bg-amber-600 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
             >
               {submitting ? '신청 중...' : '신청하기'}
