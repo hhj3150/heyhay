@@ -7,6 +7,7 @@ const express = require('express')
 const router = express.Router()
 
 router.use('/subscribe', require('./subscribe'))
+router.use('/payment', require('./payment-verify'))
 router.use('/products', require('./products'))
 router.use('/schema-check', require('./schema-check'))
 router.use('/run-migration-014', require('./run-migration'))

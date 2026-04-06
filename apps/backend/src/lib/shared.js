@@ -98,6 +98,21 @@ const SHIPPING = Object.freeze({
   base_fee: 3000,
 })
 
+/** 배송 요일 */
+const DELIVERY_DAYS = Object.freeze({
+  TUE: '화요일',
+  FRI: '금요일',
+})
+
+/** 결제 상태 */
+const PAYMENT_STATUS = Object.freeze({
+  PENDING: 'PENDING',
+  PAID: 'PAID',
+  FAILED: 'FAILED',
+  CANCELLED: 'CANCELLED',
+  REFUNDED: 'REFUNDED',
+})
+
 module.exports = {
   ROLES,
   ROLE_PERMISSIONS,
@@ -109,6 +124,8 @@ module.exports = {
   COW_STATUS,
   PUBLIC_SKUS,
   SHIPPING,
+  DELIVERY_DAYS,
+  PAYMENT_STATUS,
   apiResponse,
   apiError,
 }

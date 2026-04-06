@@ -19,5 +19,16 @@ export const FREQUENCY_OPTIONS = [
   { value: '4W', label: '월 1회 (4주)' },
 ]
 
-/** 배송 안내 */
-export const DELIVERY_NOTE = '매주 화요일·금요일 배송'
+export const DELIVERY_DAY_OPTIONS = [
+  { value: 'TUE', label: '화요일' },
+  { value: 'FRI', label: '금요일' },
+]
+
+/** PortOne 가맹점 식별코드 (테스트: imp19424728, 프로덕션은 환경변수로 대체) */
+export const PORTONE_MERCHANT_ID = 'imp19424728'
+
+/** 결제 수단 옵션 */
+export const PG_OPTIONS = [
+  { value: 'kakaopay', label: '카카오페이', icon: '💛' },
+  { value: 'naverpay', label: '네이버페이', icon: '💚' },
+]

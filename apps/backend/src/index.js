@@ -53,7 +53,7 @@ app.use('/api/v1/auth', require('./routes/auth'))
 // 공개 엔드포인트 (랜딩 페이지 신청 등) — 엄격한 레이트 리밋
 const publicLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 20,
   message: { success: false, error: { code: 'RATE_LIMITED', message: '요청이 너무 많습니다. 잠시 후 다시 시도하세요.' } },
 })
 app.use('/api/v1/public', publicLimiter, require('./routes/public'))
