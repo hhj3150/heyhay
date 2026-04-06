@@ -39,19 +39,37 @@ const publicSubscribeSchema = z.object({
 })
 
 /**
- * 서버 측 가격·배송비 재계산
+ * 서버 측 가격·배송비 재계산 (DB 최신 단가 기준)
  * @param {Array} items - [{sku_code, quantity}]
- * @returns {{ subtotal: number, shipping_fee: number, total: number, enriched_items: Array }}
+ * @returns {Promise<{ subtotal: number, shipping_fee: number, total: number, enriched_items: Array }>}
  */
-const calculatePricing = (items) => {
+const calculatePricing = async (items) => {
+  // DB에서 RETAIL 채널 최신 단가 조회
+  const codes = items.map((i) => i.sku_code)
+  const priceResult = await query(`
+    SELECT s.code, s.name, COALESCE(sp.unit_price, 0) AS unit_price
+    FROM skus s
+    LEFT JOIN sku_prices sp ON sp.sku_code = s.code AND sp.channel = 'RETAIL' AND sp.effective_to IS NULL
+    WHERE s.code = ANY($1)
+  `, [codes])
+
+  const priceMap = {}
+  for (const r of priceResult.rows) {
+    priceMap[r.code] = { name: r.name, unit_price: parseInt(r.unit_price, 10) }
+  }
+
   const enriched_items = items.map((i) => {
-    const sku = SKU_MAP[i.sku_code]
+    // DB 단가 우선, 없으면 shared.js 폴백
+    const dbSku = priceMap[i.sku_code]
+    const fallbackSku = SKU_MAP[i.sku_code]
+    const unit_price = dbSku?.unit_price || fallbackSku?.unit_price || 0
+    const name = dbSku?.name || fallbackSku?.name || i.sku_code
     return {
       sku_code: i.sku_code,
-      name: sku.name,
-      unit_price: sku.unit_price,
+      name,
+      unit_price,
       quantity: i.quantity,
-      line_total: sku.unit_price * i.quantity,
+      line_total: unit_price * i.quantity,
     }
   })
   const subtotal = enriched_items.reduce((sum, i) => sum + i.line_total, 0)
@@ -80,7 +98,7 @@ router.post('/', validate(publicSubscribeSchema), async (req, res, next) => {
     const signupIp = req.ip || req.headers['x-forwarded-for'] || null
 
     // 1) 서버 측 재계산 (클라이언트 값 신뢰 금지)
-    const { subtotal, shipping_fee, total, enriched_items } = calculatePricing(body.items)
+    const { subtotal, shipping_fee, total, enriched_items } = await calculatePricing(body.items)
 
     // 2) 고객 UPSERT (phone 기준)
     const existingCust = await query(

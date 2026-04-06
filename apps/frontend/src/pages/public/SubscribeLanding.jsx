@@ -2,13 +2,17 @@
  * @fileoverview 공개 정기구독 신청 랜딩 페이지
  * QR 코드로 접속 → 상품 담기 → 배송 주기/정보 입력 → 제출
  */
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { publicPost } from '@/lib/api'
 import {
-  Minus, Plus, Truck, Calendar, CheckCircle2, AlertCircle, ShoppingBag, Search,
+  Minus, Plus, Truck, Calendar, CheckCircle2, AlertCircle, ShoppingBag, Search, Loader2,
 } from 'lucide-react'
-import { PUBLIC_SKUS, SHIPPING, FREQUENCY_OPTIONS, DELIVERY_NOTE } from './constants'
+import {
+  PUBLIC_SKUS as FALLBACK_SKUS,
+  SHIPPING as FALLBACK_SHIPPING,
+  FREQUENCY_OPTIONS, DELIVERY_NOTE,
+} from './constants'
 
 /** 전화번호 자동 하이픈 포맷 */
 const formatPhone = (v) => {
@@ -20,6 +24,24 @@ const formatPhone = (v) => {
 
 export default function SubscribeLanding() {
   const navigate = useNavigate()
+
+  // 서버에서 가져온 상품 목록 + 배송비 정책
+  const [products, setProducts] = useState(FALLBACK_SKUS)
+  const [shipping, setShipping] = useState(FALLBACK_SHIPPING)
+  const [productsLoading, setProductsLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/v1/public/products')
+      .then((r) => r.json())
+      .then((res) => {
+        if (res.success && res.data.products?.length > 0) {
+          setProducts(res.data.products)
+          setShipping(res.data.shipping)
+        }
+      })
+      .catch(() => { /* 폴백 유지 */ })
+      .finally(() => setProductsLoading(false))
+  }, [])
 
   // 장바구니 (sku_code -> quantity)
   const [cart, setCart] = useState({})
@@ -54,16 +76,16 @@ export default function SubscribeLanding() {
     const items = Object.entries(cart)
       .filter(([, qty]) => qty > 0)
       .map(([sku_code, quantity]) => {
-        const sku = PUBLIC_SKUS.find((s) => s.code === sku_code)
-        return { sku_code, quantity, unit_price: sku.unit_price, line_total: sku.unit_price * quantity }
+        const sku = products.find((s) => s.code === sku_code)
+        return { sku_code, quantity, unit_price: sku?.unit_price || 0, line_total: (sku?.unit_price || 0) * quantity }
       })
     const subtotal = items.reduce((sum, i) => sum + i.line_total, 0)
-    const shipping_fee = subtotal >= SHIPPING.free_threshold ? 0 : (subtotal > 0 ? SHIPPING.base_fee : 0)
+    const shipping_fee = subtotal >= shipping.free_threshold ? 0 : (subtotal > 0 ? shipping.base_fee : 0)
     const total = subtotal + shipping_fee
-    const remaining_to_free = Math.max(0, SHIPPING.free_threshold - subtotal)
-    const progress_pct = Math.min(100, (subtotal / SHIPPING.free_threshold) * 100)
+    const remaining_to_free = Math.max(0, shipping.free_threshold - subtotal)
+    const progress_pct = Math.min(100, (subtotal / shipping.free_threshold) * 100)
     return { items, subtotal, shipping_fee, total, remaining_to_free, progress_pct }
-  }, [cart])
+  }, [cart, products, shipping])
 
   const updateCart = (sku_code, delta) => {
     setCart((prev) => {
@@ -163,7 +185,7 @@ export default function SubscribeLanding() {
             상품 선택
           </h2>
           <div className="space-y-2">
-            {PUBLIC_SKUS.map((sku) => {
+            {products.map((sku) => {
               const qty = cart[sku.code] || 0
               return (
                 <div key={sku.code} className="bg-white border border-slate-200 rounded-xl p-4 flex items-center gap-3">
@@ -337,7 +359,7 @@ export default function SubscribeLanding() {
               </div>
             </div>
           )}
-          {pricing.subtotal >= SHIPPING.free_threshold && (
+          {pricing.subtotal >= shipping.free_threshold && (
             <div className="mb-2 text-xs text-emerald-600 font-semibold flex items-center gap-1">
               <CheckCircle2 className="w-3 h-3" />
               무료배송 적용
