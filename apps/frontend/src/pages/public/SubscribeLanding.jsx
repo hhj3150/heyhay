@@ -272,7 +272,7 @@ export default function SubscribeLanding() {
                   type="text"
                   placeholder="우편번호"
                   value={form.address_zip}
-                  readOnly
+                  onChange={(e) => setForm({ ...form, address_zip: e.target.value })}
                   className="w-24 h-11 px-3 rounded-lg border border-slate-300 text-sm bg-slate-50 text-slate-700"
                 />
                 <button
@@ -286,10 +286,10 @@ export default function SubscribeLanding() {
               </div>
               <input
                 type="text"
-                placeholder="기본 주소"
+                placeholder="기본 주소 (주소 검색 또는 직접 입력)"
                 value={form.address_main}
-                readOnly
-                className="w-full h-11 px-3 rounded-lg border border-slate-300 text-sm bg-slate-50 text-slate-700"
+                onChange={(e) => setForm({ ...form, address_main: e.target.value })}
+                className="w-full h-11 px-3 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
               />
               <input
                 type="text"
