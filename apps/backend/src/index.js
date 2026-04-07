@@ -11,6 +11,9 @@ const { authenticate, authorizeModule } = require('./middleware/auth')
 
 const app = express()
 
+// Railway 등 리버스 프록시 뒤에서 express-rate-limit이 정상 동작하도록
+app.set('trust proxy', 1)
+
 // --- 글로벌 미들웨어 ---
 app.use(helmet())
 app.use(cors({
@@ -26,6 +29,7 @@ app.use(cors({
     if (!origin || allowed.includes(origin) ||
         origin.endsWith('.netlify.app') ||
         origin.endsWith('송영신목장.com') ||
+                            origin.endsWith('.railway.app') ||
         origin.includes('xn--')) {
       callback(null, true)
     } else if (process.env.NODE_ENV === 'production') {
