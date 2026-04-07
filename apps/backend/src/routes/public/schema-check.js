@@ -43,6 +43,16 @@ router.get('/', async (req, res) => {
   const expectedNewCols = ['shipping_fee', 'delivery_note', 'signup_source', 'signup_ip', 'consent_sms', 'consent_privacy']
   const missing = expectedNewCols.filter((c) => !columns.includes(c))
 
+  // users 테이블 진단
+  const usersExist = await safeQuery(`
+    SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'users') AS exists
+  `)
+  const usersCount = await safeQuery(`SELECT COUNT(*) AS cnt FROM users`)
+  const usersInfo = await safeQuery(`
+    SELECT id, username, role, name, is_active, LENGTH(password_hash) AS hash_len
+    FROM users WHERE deleted_at IS NULL ORDER BY created_at
+  `)
+
   res.json(apiResponse({
     subscriptions_columns: columns,
     missing_new_columns: missing,
@@ -50,6 +60,9 @@ router.get('/', async (req, res) => {
     all_migrations: migApplied,
     sms_logs_table: smsTable,
     status_check: statusCheck,
+    users_table_exists: usersExist,
+    users_count: usersCount,
+    users_info: usersInfo,
   }))
 })
 
