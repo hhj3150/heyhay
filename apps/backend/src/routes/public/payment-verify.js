@@ -59,9 +59,12 @@ router.post('/verify', validate(verifySchema), async (req, res, next) => {
         return res.status(400).json(apiError('PAYMENT_MISMATCH', result.reason))
       }
     } catch (portoneErr) {
-      // PortOne API 키가 없으면 (테스트 모드) 검증 스킵
-      if (portoneErr.message.includes('설정되지 않았습니다')) {
-        portoneVerified = true // 테스트 모드: 검증 스킵
+      // PortOne API 키 미설정: 테스트 환경에서만 검증 스킵
+      if (
+        portoneErr.message.includes('설정되지 않았습니다')
+        && process.env.NODE_ENV === 'test'
+      ) {
+        portoneVerified = true
       } else {
         throw portoneErr
       }

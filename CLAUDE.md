@@ -23,7 +23,7 @@
 - Frontend: React 18 + Vite + TailwindCSS + shadcn/ui + Recharts + Zustand
 - Backend: Node.js 20 + Express.js + PostgreSQL 16 + TimescaleDB + Redis
 - Auth: JWT (access 15분 / refresh 7일)
-- 외부 연동: smaXtec Cloud API, Naver Commerce API
+- 외부 연동: smaXtec Cloud API, Naver Commerce API, PortOne 결제 API (카카오페이/네이버페이)
 - AI: Claude Sonnet API (이상 감지·자연어 보고)
 - 배포: Docker + Nginx on VPS
 ## 데이터베이스 원칙
@@ -36,12 +36,18 @@
 - 에러 응답: { success: false, error: { code, message } }
 - 라우트 네이밍: /api/v1/{module}/{resource}
 - 환경변수: .env 파일, 절대 하드코딩 금지
+- 필수 환경변수: DATABASE_URL, REDIS_URL, JWT_SECRET, PORTONE_API_KEY, PORTONE_API_SECRET
+- 공유 상수/헬퍼: apps/backend/src/lib/shared.js (ROLES, SKU, PAYMENT_STATUS, apiResponse, apiError 등 — 중복 정의 금지)
 ## 4개 모듈 (라우트 prefix)
 - /api/v1/farm      ← 목장 관리 (개체·착유·번식·건강·센서)
 - /api/v1/factory   ← 공장 관리 (원유입고·공정·생산·재고·원가)
 - /api/v1/market    ← 온라인 마켓 (주문·구독·고객·채널)
 - /api/v1/cafe      ← 밀크카페 (POS·정산·재고)
 - /api/v1/dashboard ← 통합 대시보드
+- /api/v1/public    ← 공개 엔드포인트 (인증 불필요, 레이트 리밋 15분/20회)
+  - GET /products: 랜딩 페이지 상품·단가 (DB 동적 로드)
+  - POST /subscribe: 정기구독 신청 + 결제 대기
+  - POST /payment/verify: PortOne 결제 검증 → 구독 활성화
 ## 사용자 역할
 - ADMIN: 하원장님 (전체 접근 + 재무)
 - FACTORY: 공장 담당자 (공장+재고)
