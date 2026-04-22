@@ -108,6 +108,22 @@ router.post('/verify', validate(verifySchema), async (req, res, next) => {
         WHERE id = $2
       `, [paymentRow.amount, paymentRow.customer_id])
 
+      // 고객명·연락처 조회 (알림 메시지용)
+      const custResult = await client.query(
+        'SELECT name, phone FROM customers WHERE id = $1',
+        [paymentRow.customer_id],
+      )
+      const customer = custResult.rows[0] || { name: '고객', phone: '' }
+
+      // P2 알림: 관리자에게 신규 구독 결제 통지
+      await client.query(`
+        INSERT INTO alerts (module, priority, alert_type, title, message, target_roles)
+        VALUES ('market', 'P2', 'SUBSCRIPTION_PAID', $1, $2, '["ADMIN"]')
+      `, [
+        `신규 정기구독 결제 — ${customer.name}`,
+        `${customer.name}(${customer.phone}) 고객 정기구독이 결제·활성화되었습니다. 금액 ₩${paymentRow.amount.toLocaleString('ko-KR')} / 주기 ${sub.frequency} / 첫 결제일 ${sub.started_at}`,
+      ])
+
       return {
         subscription_id: sub.id,
         status: 'ACTIVE',

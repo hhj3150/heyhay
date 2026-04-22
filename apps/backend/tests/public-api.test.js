@@ -235,25 +235,26 @@ describe('POST /api/v1/public/payment/verify', () => {
     })
 
     // transaction mock
-    database.transaction.mockImplementationOnce(async (cb) => {
-      const mockClient = {
-        query: jest.fn()
-          // payments UPDATE
-          .mockResolvedValueOnce({ rowCount: 1 })
-          // subscriptions SELECT
-          .mockResolvedValueOnce({
-            rows: [{
-              id: 'sub-1', started_at: '2026-05-01', frequency: '1W',
-              delivery_days: ['TUE'], status: 'PAYMENT_PENDING',
-            }],
-          })
-          // subscriptions UPDATE
-          .mockResolvedValueOnce({ rowCount: 1 })
-          // customers UPDATE
-          .mockResolvedValueOnce({ rowCount: 1 }),
-      }
-      return cb(mockClient)
-    })
+    const mockClientQuery = jest.fn()
+      // payments UPDATE
+      .mockResolvedValueOnce({ rowCount: 1 })
+      // subscriptions SELECT
+      .mockResolvedValueOnce({
+        rows: [{
+          id: 'sub-1', started_at: '2026-05-01', frequency: '1W',
+          delivery_days: ['TUE'], status: 'PAYMENT_PENDING',
+        }],
+      })
+      // subscriptions UPDATE
+      .mockResolvedValueOnce({ rowCount: 1 })
+      // customers UPDATE
+      .mockResolvedValueOnce({ rowCount: 1 })
+      // customers SELECT (알림 메시지용)
+      .mockResolvedValueOnce({ rows: [{ name: '테스트유저', phone: '010-1234-5678' }] })
+      // alerts INSERT
+      .mockResolvedValueOnce({ rowCount: 1 })
+
+    database.transaction.mockImplementationOnce(async (cb) => cb({ query: mockClientQuery }))
 
     const res = await request(app)
       .post('/api/v1/public/payment/verify')
@@ -264,6 +265,14 @@ describe('POST /api/v1/public/payment/verify', () => {
     expect(res.body.data.status).toBe('ACTIVE')
     expect(res.body.data).toHaveProperty('next_payment_at')
     expect(res.body.data).toHaveProperty('message')
+
+    // 알림 INSERT 호출 확인
+    const alertCall = mockClientQuery.mock.calls.find(
+      ([sql]) => typeof sql === 'string' && sql.includes('INSERT INTO alerts'),
+    )
+    expect(alertCall).toBeDefined()
+    expect(alertCall[1][0]).toContain('테스트유저')
+    expect(alertCall[1][1]).toContain('27,000')
   })
 
   test('결제 레코드 없음 → 404', async () => {
