@@ -22,3 +22,4 @@
 [build.environment]
   NODE_VERSION = "20"
   VITE_API_URL = "https://heyhay-production.up.railway.app"
+  # VITE_CUSTOMER_CONTACT = "010-0000-0000"  # 선택: 구독 완료 페이지에 노출할 문의처 (미설정 시 숨김)

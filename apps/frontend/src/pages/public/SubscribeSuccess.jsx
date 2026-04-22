@@ -81,7 +81,9 @@ export default function SubscribeSuccess() {
             <ul className="text-amber-800 space-y-1">
               <li>· 배송 전일 오후에 준비·출고됩니다</li>
               <li>· 구독 변경·일시정지는 담당자에게 문의하세요</li>
-              <li>· 문의: 010-XXXX-XXXX</li>
+              {import.meta.env.VITE_CUSTOMER_CONTACT && (
+                <li>· 문의: {import.meta.env.VITE_CUSTOMER_CONTACT}</li>
+              )}
             </ul>
           </div>
         </div>
