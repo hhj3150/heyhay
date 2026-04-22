@@ -9,5 +9,6 @@ const router = express.Router()
 router.use('/subscribe', require('./subscribe'))
 router.use('/payment', require('./payment-verify'))
 router.use('/products', require('./products'))
+router.use('/portone', require('./portone-webhook'))
 
 module.exports = router
