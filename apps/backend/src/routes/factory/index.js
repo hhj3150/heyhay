@@ -11,6 +11,8 @@ router.use('/raw-milk', require('./rawMilk'))
 router.use('/process', require('./process'))
 router.use('/cost-analysis', require('./costAnalysis'))
 router.use('/shipments', require('./shipments'))
+router.use('/sku-conversion', require('./skuConversion'))
+router.use('/daily-ops', require('./dailyOps'))
 
 // production.js 에서 SKU, 배치, 재고를 모두 처리
 router.use('/', require('./production'))

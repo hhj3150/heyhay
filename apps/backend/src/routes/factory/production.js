@@ -38,11 +38,116 @@ const moveSchema = z.object({
   reason: z.string().optional(),
 })
 
-/** GET /skus — SKU 마스터 목록 */
+/** GET /skus — SKU 마스터 목록 (?include_inactive=1 시 비활성 포함) */
 router.get('/skus', async (req, res, next) => {
   try {
-    const result = await query('SELECT * FROM skus WHERE is_active = true ORDER BY code')
+    const includeInactive = req.query.include_inactive === '1' || req.query.include_inactive === 'true'
+    const sql = includeInactive
+      ? 'SELECT * FROM skus ORDER BY code'
+      : 'SELECT * FROM skus WHERE is_active = true ORDER BY code'
+    const result = await query(sql)
     res.json(apiResponse(result.rows))
+  } catch (err) {
+    next(err)
+  }
+})
+
+const skuCreateSchema = z.object({
+  code: z.string().min(2).max(20).regex(/^[A-Z0-9-]+$/, '대문자/숫자/하이픈만'),
+  name: z.string().min(1).max(100),
+  volume_ml: z.number().int().positive().nullable().optional(),
+  product_type: z.enum(['살균유', '발효유', '즉석제조', '크림']),
+  shelf_days: z.number().int().min(0).default(7),
+  milk_per_unit_ml: z.number().int().positive().optional(), // 환산비 같이 등록
+  is_active: z.boolean().default(true),
+})
+
+const skuUpdateSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  volume_ml: z.number().int().positive().nullable().optional(),
+  product_type: z.enum(['살균유', '발효유', '즉석제조', '크림']).optional(),
+  shelf_days: z.number().int().min(0).optional(),
+  is_active: z.boolean().optional(),
+}).refine((d) => Object.keys(d).length > 0, { message: '수정 항목 없음' })
+
+/** POST /skus — 신규 제품 등록 (코드 자동 대문자) */
+router.post('/skus', validate(skuCreateSchema), async (req, res, next) => {
+  try {
+    const b = req.body
+    const code = b.code.toUpperCase()
+
+    // 중복 체크
+    const dup = await query('SELECT id FROM skus WHERE code = $1', [code])
+    if (dup.rows.length > 0) {
+      return res.status(409).json(apiError('SKU_CODE_EXISTS', `이미 존재하는 코드: ${code}`))
+    }
+
+    const result = await transaction(async (client) => {
+      const skuRes = await client.query(`
+        INSERT INTO skus (code, name, volume_ml, product_type, shelf_days, is_active)
+        VALUES ($1,$2,$3,$4,$5,$6)
+        RETURNING *
+      `, [code, b.name, b.volume_ml ?? null, b.product_type, b.shelf_days, b.is_active])
+
+      const sku = skuRes.rows[0]
+
+      // 환산비 같이 등록 (있으면)
+      if (b.milk_per_unit_ml) {
+        await client.query(`
+          INSERT INTO sku_milk_conversion (sku_id, milk_per_unit_ml, notes, created_by)
+          VALUES ($1, $2, '신규 등록', $3)
+        `, [sku.id, b.milk_per_unit_ml, req.user?.id || null])
+      }
+
+      return sku
+    })
+
+    res.status(201).json(apiResponse(result))
+  } catch (err) {
+    next(err)
+  }
+})
+
+/** PATCH /skus/:id — 제품 정보 수정 (code/환산비는 별도 라우트) */
+router.patch('/skus/:id', validate(skuUpdateSchema), async (req, res, next) => {
+  try {
+    const id = req.params.id
+    const b = req.body
+
+    const sets = []
+    const params = []
+    let idx = 1
+    for (const [k, v] of Object.entries(b)) {
+      sets.push(`${k} = $${idx++}`)
+      params.push(v)
+    }
+    sets.push('updated_at = NOW()')
+    params.push(id)
+
+    const result = await query(
+      `UPDATE skus SET ${sets.join(', ')} WHERE id = $${idx} RETURNING *`,
+      params,
+    )
+    if (result.rows.length === 0) {
+      return res.status(404).json(apiError('SKU_NOT_FOUND', 'SKU를 찾을 수 없습니다'))
+    }
+    res.json(apiResponse(result.rows[0]))
+  } catch (err) {
+    next(err)
+  }
+})
+
+/** DELETE /skus/:id — 제품 비활성화 (soft delete: is_active=false) */
+router.delete('/skus/:id', async (req, res, next) => {
+  try {
+    const result = await query(
+      'UPDATE skus SET is_active = false, updated_at = NOW() WHERE id = $1 RETURNING id, code',
+      [req.params.id],
+    )
+    if (result.rows.length === 0) {
+      return res.status(404).json(apiError('SKU_NOT_FOUND', 'SKU를 찾을 수 없습니다'))
+    }
+    res.json(apiResponse({ message: '비활성화 완료', ...result.rows[0] }))
   } catch (err) {
     next(err)
   }

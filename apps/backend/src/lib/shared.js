@@ -146,6 +146,15 @@ const CHANNEL_PRICE_KEY = Object.freeze({
   OWN_MALL: 'RETAIL',
 })
 
+/** 일일 운영 알림 코드 */
+const DAILY_OPS_ALERT = Object.freeze({
+  NEGATIVE_PROMOTION: { code: 'NEGATIVE_PROMOTION', priority: 'P1', label: '진흥회 음수' },
+  LOSS_HIGH: { code: 'LOSS_HIGH', priority: 'P2', label: '로스율 초과', threshold_pct: 5 },
+  LOSS_NEGATIVE: { code: 'LOSS_NEGATIVE', priority: 'P2', label: '환산비 점검' },
+  CCP_DEVIATION_OPEN: { code: 'CCP_DEVIATION_OPEN', priority: 'P1', label: 'CCP 이탈 미해결' },
+  OPS_CLOSED: { code: 'OPS_CLOSED', priority: 'P3', label: '마감일 수정 차단' },
+})
+
 module.exports = {
   ROLES,
   ROLE_PERMISSIONS,
@@ -163,6 +172,7 @@ module.exports = {
   SHIPMENT_CHANNEL,
   CHANNEL_MOVEMENT_TYPE,
   CHANNEL_PRICE_KEY,
+  DAILY_OPS_ALERT,
   apiResponse,
   apiError,
 }
