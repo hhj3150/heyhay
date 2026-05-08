@@ -113,6 +113,39 @@ const PAYMENT_STATUS = Object.freeze({
   REFUNDED: 'REFUNDED',
 })
 
+/** 출하 상태 (재고 차감 시점: SHIPPED 진입 시) */
+const SHIPMENT_STATUS = Object.freeze({
+  PLANNED: 'PLANNED',
+  PICKED: 'PICKED',
+  SHIPPED: 'SHIPPED',
+  DELIVERED: 'DELIVERED',
+  CANCELLED: 'CANCELLED',
+})
+
+/** 출하 채널 */
+const SHIPMENT_CHANNEL = Object.freeze({
+  B2B: 'B2B',
+  CAFE: 'CAFE',
+  SMARTSTORE: 'SMARTSTORE',
+  OWN_MALL: 'OWN_MALL',
+})
+
+/** 채널 → inventory_movements.movement_type */
+const CHANNEL_MOVEMENT_TYPE = Object.freeze({
+  B2B: 'B2B_OUT',
+  CAFE: 'CAFE_OUT',
+  SMARTSTORE: 'SALE',
+  OWN_MALL: 'SALE',
+})
+
+/** 채널 → sku_prices.channel (단가 fallback) */
+const CHANNEL_PRICE_KEY = Object.freeze({
+  B2B: 'B2B',
+  CAFE: 'CAFE',
+  SMARTSTORE: 'RETAIL',
+  OWN_MALL: 'RETAIL',
+})
+
 module.exports = {
   ROLES,
   ROLE_PERMISSIONS,
@@ -126,6 +159,10 @@ module.exports = {
   SHIPPING,
   DELIVERY_DAYS,
   PAYMENT_STATUS,
+  SHIPMENT_STATUS,
+  SHIPMENT_CHANNEL,
+  CHANNEL_MOVEMENT_TYPE,
+  CHANNEL_PRICE_KEY,
   apiResponse,
   apiError,
 }

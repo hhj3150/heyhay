@@ -79,11 +79,26 @@ function authDelete(path, token) {
     .set('Authorization', `Bearer ${token}`)
 }
 
+/**
+ * 인증 헤더가 포함된 PATCH 요청
+ * @param {string} path - API 경로
+ * @param {object} body - 요청 본문
+ * @param {string} token - JWT 토큰
+ * @returns {Promise<import('supertest').Response>}
+ */
+function authPatch(path, body, token) {
+  return request(app)
+    .patch(path)
+    .set('Authorization', `Bearer ${token}`)
+    .send(body)
+}
+
 module.exports = {
   app,
   getAdminToken,
   authGet,
   authPost,
   authPut,
+  authPatch,
   authDelete,
 }
