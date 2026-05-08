@@ -6,11 +6,13 @@ import CostAnalysisPage from './CostAnalysisPage'
 import PackagingPage from './PackagingPage'
 import PackagingOrders from './PackagingOrders'
 import CCPRecordPage from './CCPRecordPage'
+import DailyOpsPage from './DailyOpsPage'
 
 export default function FactoryRoutes() {
   return (
     <Routes>
-      <Route index element={<Navigate to="plan" replace />} />
+      <Route index element={<Navigate to="daily-ops" replace />} />
+      <Route path="daily-ops" element={<DailyOpsPage />} />
       <Route path="dashboard" element={<FactoryDashboard />} />
       <Route path="plan" element={<ProductionPlan />} />
       <Route path="inventory" element={<InventoryPage />} />
